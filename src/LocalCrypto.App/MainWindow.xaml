@@ -1,0 +1,186 @@
+<Window x:Class="LocalCrypto.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="localCrypto" Height="820" Width="1220" MinHeight="720" MinWidth="1040"
+        Background="#F6F4EF" WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,8,8,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4,12,10" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="MinWidth" Value="160" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,4,12,10" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="MinWidth" Value="160" />
+        </Style>
+        <Style x:Key="Panel" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#DCD7CC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#1F2933" Padding="22">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="localCrypto" Foreground="White" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Windows ledger-first" Foreground="#B8C2CC" Margin="0,4,0,28" />
+                    <TextBlock Text="V0.1 WPF" Foreground="#D7B46A" FontWeight="SemiBold" />
+                    <TextBlock Text="Sans web, sans localhost" Foreground="#B8C2CC" Margin="0,4,0,28" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Bottom">
+                    <TextBlock Text="Source de verite" Foreground="#B8C2CC" />
+                    <TextBlock x:Name="DatabasePathText" TextWrapping="Wrap" Foreground="White" Margin="0,6,0,0" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="26">
+                <TextBlock Text="Portefeuille" FontSize="30" FontWeight="SemiBold" Foreground="#17212B" />
+                <TextBlock Text="Les positions sont reconstruites depuis les transactions SQLite locales." Foreground="#52606D" Margin="0,4,0,20" />
+
+                <UniformGrid Columns="4" Margin="0,0,0,14">
+                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="Investi" Foreground="#52606D" />
+                            <TextBlock x:Name="InvestedText" FontSize="24" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="PnL realise" Foreground="#52606D" />
+                            <TextBlock x:Name="RealizedPnlText" FontSize="24" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="Frais suivis" Foreground="#52606D" />
+                            <TextBlock x:Name="FeesText" FontSize="24" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}">
+                        <StackPanel>
+                            <TextBlock Text="Transactions" Foreground="#52606D" />
+                            <TextBlock x:Name="TransactionCountText" FontSize="24" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <Border Style="{StaticResource Panel}">
+                    <StackPanel>
+                        <TextBlock Text="Ajouter une transaction" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <WrapPanel>
+                            <StackPanel>
+                                <TextBlock Text="Date" />
+                                <TextBox x:Name="ExecutedAtBox" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Side" />
+                                <ComboBox x:Name="SideBox" SelectedIndex="0">
+                                    <ComboBoxItem Content="Buy" />
+                                    <ComboBoxItem Content="Sell" />
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Symbole" />
+                                <TextBox x:Name="SymbolBox" CharacterCasing="Upper" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Nom actif" />
+                                <TextBox x:Name="AssetNameBox" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Quantite" />
+                                <TextBox x:Name="QuantityBox" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Prix unitaire" />
+                                <TextBox x:Name="UnitPriceBox" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Devise prix" />
+                                <TextBox x:Name="QuoteCurrencyBox" Text="USDT" CharacterCasing="Upper" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Frais" />
+                                <TextBox x:Name="FeeAmountBox" Text="0" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Devise frais" />
+                                <TextBox x:Name="FeeCurrencyBox" Text="USDT" CharacterCasing="Upper" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Source" />
+                                <TextBox x:Name="SourceBox" Text="MANUAL" CharacterCasing="Upper" />
+                            </StackPanel>
+                            <StackPanel Width="340">
+                                <TextBlock Text="Note" />
+                                <TextBox x:Name="NoteBox" MinWidth="320" />
+                            </StackPanel>
+                        </WrapPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Enregistrer" Click="AddTransaction_Click" Background="#2563EB" Foreground="White" />
+                            <Button Content="Rafraichir" Click="Refresh_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="FeedbackText" Foreground="#92400E" Margin="0,8,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Panel}">
+                    <StackPanel>
+                        <TextBlock Text="Positions" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <DataGrid x:Name="PositionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="130">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Actif" Binding="{Binding Symbol}" Width="*" />
+                                <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
+                                <DataGridTextColumn Header="Prix moyen" Binding="{Binding AverageCost}" Width="*" />
+                                <DataGridTextColumn Header="Cout investi" Binding="{Binding InvestedCost}" Width="*" />
+                                <DataGridTextColumn Header="PnL realise" Binding="{Binding RealizedPnl}" Width="*" />
+                                <DataGridTextColumn Header="Frais" Binding="{Binding Fees}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Panel}">
+                    <StackPanel>
+                        <TextBlock Text="Journal" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <DataGrid x:Name="TransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="220">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="150" />
+                                <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="80" />
+                                <DataGridTextColumn Header="Actif" Binding="{Binding Symbol}" Width="90" />
+                                <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
+                                <DataGridTextColumn Header="Prix" Binding="{Binding UnitPrice}" Width="*" />
+                                <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="*" />
+                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" />
+                                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
