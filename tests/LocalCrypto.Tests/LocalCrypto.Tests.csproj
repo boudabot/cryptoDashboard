@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LocalCrypto.Core\LocalCrypto.Core.csproj" />
+    <ProjectReference Include="..\..\src\LocalCrypto.Data\LocalCrypto.Data.csproj" />
   </ItemGroup>
 
 </Project>

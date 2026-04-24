@@ -129,14 +129,83 @@ public sealed class SqliteLedgerStore
         command.Parameters.AddWithValue("$duplicate_signature", DuplicateSignature(transaction));
         command.Parameters.AddWithValue("$import_id", DBNull.Value);
         command.Parameters.AddWithValue("$created_at", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
-        command.ExecuteNonQuery();
+
+        try
+        {
+            command.ExecuteNonQuery();
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            throw new DuplicateTransactionException("Transaction refusee: doublon probable deja present dans le ledger.", exception);
+        }
+    }
+
+    public bool HasDuplicate(LedgerTransaction transaction)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT 1
+            FROM transactions
+            WHERE duplicate_signature = $duplicate_signature
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$duplicate_signature", DuplicateSignature(transaction));
+
+        return command.ExecuteScalar() is not null;
+    }
+
+    public bool DeleteTransaction(string id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM transactions WHERE id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+
+        return command.ExecuteNonQuery() == 1;
+    }
+
+    public void BackupDatabase(string backupPath)
+    {
+        EnsureCreated();
+        Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
+
+        using var source = OpenConnection();
+        using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = backupPath,
+            Pooling = false
+        }.ToString());
+        destination.Open();
+
+        source.BackupDatabase(destination);
+    }
+
+    public void RestoreDatabase(string backupPath)
+    {
+        if (!File.Exists(backupPath))
+        {
+            throw new FileNotFoundException("Sauvegarde introuvable.", backupPath);
+        }
+
+        if (string.Equals(Path.GetFullPath(backupPath), Path.GetFullPath(_databasePath), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("La sauvegarde source ne peut pas etre la base active.");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(_databasePath)!);
+        File.Copy(backupPath, _databasePath, overwrite: true);
+        DeleteIfExists(_databasePath + "-wal");
+        DeleteIfExists(_databasePath + "-shm");
+        EnsureCreated();
     }
 
     private SqliteConnection OpenConnection()
     {
         var builder = new SqliteConnectionStringBuilder
         {
-            DataSource = _databasePath
+            DataSource = _databasePath,
+            Pooling = false
         };
 
         var connection = new SqliteConnection(builder.ToString());
@@ -158,5 +227,21 @@ public sealed class SqliteLedgerStore
         };
 
         return string.Join("|", parts);
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+}
+
+public sealed class DuplicateTransactionException : InvalidOperationException
+{
+    public DuplicateTransactionException(string message, Exception innerException)
+        : base(message, innerException)
+    {
     }
 }

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using LocalCrypto.Core;
 using LocalCrypto.Data;
+using Microsoft.Win32;
 
 namespace LocalCrypto.App;
 
@@ -16,6 +17,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _store = SqliteLedgerStore.OpenDefault();
         DatabasePathText.Text = _store.DatabasePath;
+        DataFileText.Text = _store.DatabasePath;
         ResetForm();
         RefreshPortfolio();
     }
@@ -39,8 +41,14 @@ public partial class MainWindow : Window
                 NoteBox.Text.Trim());
 
             ValidateTransaction(transaction);
+            if (_store.HasDuplicate(transaction))
+            {
+                throw new InvalidOperationException("Transaction refusee: doublon probable deja present dans le ledger.");
+            }
+
             _store.AddTransaction(transaction);
             FeedbackText.Text = $"Transaction {transaction.Side} {transaction.Symbol} enregistree.";
+            DataFeedbackText.Text = "Ledger SQLite mis a jour.";
             ResetForm();
             RefreshPortfolio();
         }
@@ -51,6 +59,100 @@ public partial class MainWindow : Window
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshPortfolio();
+
+    private void BackupDatabase_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = "Sauvegarder la base localCrypto",
+                Filter = "SQLite (*.sqlite)|*.sqlite|Tous les fichiers (*.*)|*.*",
+                FileName = $"localcrypto-backup-{DateTime.Now:yyyyMMdd-HHmmss}.sqlite"
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            _store.BackupDatabase(dialog.FileName);
+            DataFeedbackText.Text = $"Sauvegarde creee: {dialog.FileName}";
+        }
+        catch (Exception exception)
+        {
+            DataFeedbackText.Text = exception.Message;
+        }
+    }
+
+    private void RestoreDatabase_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Restaurer une sauvegarde localCrypto",
+                Filter = "SQLite (*.sqlite;*.db)|*.sqlite;*.db|Tous les fichiers (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            var confirmation = MessageBox.Show(
+                this,
+                "Restaurer cette sauvegarde remplacera la base SQLite active. Continuer ?",
+                "Confirmer la restauration",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _store.RestoreDatabase(dialog.FileName);
+            DataFeedbackText.Text = $"Base restauree depuis: {dialog.FileName}";
+            FeedbackText.Text = "Portefeuille recharge depuis la base restauree.";
+            RefreshPortfolio();
+        }
+        catch (Exception exception)
+        {
+            DataFeedbackText.Text = exception.Message;
+        }
+    }
+
+    private void DeleteTransaction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string id)
+        {
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this,
+            "Supprimer cette transaction du ledger SQLite ? Les positions seront recalculees depuis le journal restant.",
+            "Confirmer la suppression",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (_store.DeleteTransaction(id))
+        {
+            FeedbackText.Text = "Transaction supprimee. Portefeuille recalcule depuis le ledger.";
+            DataFeedbackText.Text = "Ledger SQLite mis a jour.";
+            RefreshPortfolio();
+        }
+        else
+        {
+            FeedbackText.Text = "Transaction introuvable. Rafraichis le journal.";
+        }
+    }
 
     private void RefreshPortfolio()
     {
@@ -71,6 +173,7 @@ public partial class MainWindow : Window
             Money(position.Fees, position.QuoteCurrency))).ToList();
 
         TransactionsGrid.ItemsSource = transactions.Select(transaction => new TransactionRow(
+            transaction.Id,
             transaction.ExecutedAt.ToLocalTime().ToString("g", FrenchCulture),
             transaction.Side.ToString(),
             transaction.Symbol,
@@ -174,6 +277,7 @@ public partial class MainWindow : Window
         string Fees);
 
     private sealed record TransactionRow(
+        string Id,
         string ExecutedAt,
         string Side,
         string Symbol,

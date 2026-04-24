@@ -42,26 +42,39 @@ Source de verite unique:
 %APPDATA%\localCrypto\localcrypto.sqlite
 ```
 
-Pour sauvegarder: copier ce fichier SQLite quand l'application est fermee.
+Depuis V0.1.1, l'application expose un bloc `Donnees` pour:
 
-Pour restaurer: fermer l'application, remplacer ce fichier par la sauvegarde, relancer.
+- sauvegarder la base SQLite active
+- restaurer une sauvegarde SQLite avec confirmation
+- rappeler que l'ancien cache Electron n'est pas la source portefeuille WPF
 
 ## Branche
 
-Branche de travail:
+Flux de branches:
 
 ```text
-codex/wpf-v01-foundation
+master: release stable
+dev: integration
+codex/...: evolutions
 ```
 
-## Portee V0.1
+Branche de travail actuelle:
+
+```text
+codex/v011-data-safety
+```
+
+## Portee V0.1.1
 
 - fenetre Windows native WPF
 - ajout manuel BUY/SELL
 - journal SQLite local
+- sauvegarde/restauration SQLite depuis l'application
+- suppression transaction avec confirmation
+- refus lisible des doublons probables
 - calcul ledger-first: quantite, prix moyen, cout investi, frais, PnL realise
 - pas de web, pas d'Electron, pas de Vite, pas de localhost
 
 ## Prochain jalon
 
-Valider le ressenti produit WPF. Si la trajectoire convainc, archiver l'ancien prototype Electron et garder WPF comme unique flux principal.
+Valider V0.1.1 en usage reel, puis ajouter une premiere preview d'import CSV sans ecrasement silencieux.

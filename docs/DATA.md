@@ -2,7 +2,7 @@
 
 ## Source de verite
 
-La source de verite V0.1 est le ledger SQLite:
+La source de verite V0.1.1 est le ledger SQLite:
 
 ```text
 %APPDATA%\localCrypto\localcrypto.sqlite
@@ -34,18 +34,34 @@ Champs:
 - note
 - created_at
 
-## Sauvegarde
+## Sauvegarde recommandee
 
-1. Fermer localCrypto.
-2. Copier `%APPDATA%\localCrypto\localcrypto.sqlite`.
-3. Garder la copie dans un dossier de backup.
+1. Ouvrir localCrypto.
+2. Aller au bloc `Donnees`.
+3. Cliquer `Sauvegarder SQLite`.
+4. Garder le fichier `.sqlite` produit dans un dossier de backup.
 
-## Restauration
+Alternative manuelle: fermer localCrypto, copier `%APPDATA%\localCrypto\localcrypto.sqlite`, puis garder cette copie dans un dossier de backup.
 
-1. Fermer localCrypto.
-2. Renommer la base actuelle si elle existe.
-3. Copier la sauvegarde vers `%APPDATA%\localCrypto\localcrypto.sqlite`.
-4. Relancer l'application.
+## Restauration recommandee
+
+1. Ouvrir localCrypto.
+2. Aller au bloc `Donnees`.
+3. Cliquer `Restaurer SQLite`.
+4. Choisir la sauvegarde.
+5. Confirmer le remplacement de la base active.
+
+Alternative manuelle: fermer localCrypto, remplacer `%APPDATA%\localCrypto\localcrypto.sqlite`, supprimer les fichiers `localcrypto.sqlite-wal` et `localcrypto.sqlite-shm` s'ils existent, puis relancer.
+
+## Doublons et suppression
+
+Les transactions ont une signature de doublon basee sur date, side, symbole, quantite, prix, frais et devise de frais. Un doublon probable est refuse avec un message lisible.
+
+La suppression se fait depuis le journal, ligne par ligne, avec confirmation. Les positions et PnL sont ensuite recalcules depuis les transactions restantes.
+
+## Legacy
+
+L'ancien cache Electron n'est pas la source de verite du flux WPF. Il doit rester hors du flux principal tant que la trajectoire WPF est validee.
 
 ## Migration
 
