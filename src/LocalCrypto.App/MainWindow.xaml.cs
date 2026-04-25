@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private static readonly CultureInfo FrenchCulture = CultureInfo.GetCultureInfo("fr-FR");
     private readonly SqliteLedgerStore _store;
     private readonly BinanceImportPreviewer _binanceImportPreviewer = new();
+    private readonly BinanceLedgerMapper _binanceLedgerMapper = new();
     private readonly List<BinanceImportEvent> _binanceImportEvents = [];
     private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _loadedImportEventSignatures = new(StringComparer.OrdinalIgnoreCase);
@@ -29,6 +30,25 @@ public partial class MainWindow : Window
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshPortfolio();
+
+    private void NavigateSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string target)
+        {
+            return;
+        }
+
+        FrameworkElement? section = target switch
+        {
+            "Dashboard" => DashboardAnchor,
+            "Positions" => PositionsAnchor,
+            "Imports" => ImportsAnchor,
+            "Data" => DataAnchor,
+            _ => null
+        };
+
+        section?.BringIntoView();
+    }
 
     private void LoadBinanceImport_Click(object sender, RoutedEventArgs e)
     {
@@ -89,6 +109,51 @@ public partial class MainWindow : Window
         _loadedImportSourceRows = 0;
         ImportFeedbackText.Text = "Preview Binance reinitialisee.";
         RefreshImportDashboard();
+    }
+
+    private void WriteImportableTrades_Click(object sender, RoutedEventArgs e)
+    {
+        var candidates = _binanceLedgerMapper.Map(_binanceImportEvents);
+        var writable = candidates.Where(candidate => candidate.CanWrite && candidate.Transaction is not null).ToList();
+        var blocked = candidates.Count - writable.Count;
+
+        if (writable.Count == 0)
+        {
+            ImportFeedbackText.Text = blocked == 0
+                ? "Aucun trade importable charge."
+                : $"{blocked} evenement(s) restent a confirmer avant ecriture.";
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this,
+            $"Ecrire {writable.Count} trade(s) BUY/SELL dans le ledger SQLite ? {blocked} evenement(s) resteront en preview.",
+            "Valider l'import Binance",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var written = 0;
+        var duplicates = 0;
+        foreach (var candidate in writable)
+        {
+            try
+            {
+                _store.AddTransaction(candidate.Transaction!);
+                written++;
+            }
+            catch (DuplicateTransactionException)
+            {
+                duplicates++;
+            }
+        }
+
+        ImportFeedbackText.Text = $"{written} trade(s) ecrit(s), {duplicates} doublon(s) deja presents, {blocked} evenement(s) gardes en quarantaine.";
+        RefreshPortfolio();
     }
 
     private void ImportViewFilter_Click(object sender, RoutedEventArgs e)
@@ -162,6 +227,7 @@ public partial class MainWindow : Window
         RefreshImportChart(_binanceImportEvents);
         RefreshImportAssets(_binanceImportEvents);
         RefreshRecentOrders(_binanceImportEvents);
+        UpdateDataConfidence(PortfolioCalculator.Calculate(_store.ListTransactions()));
         ApplyImportFilters();
     }
 
@@ -402,10 +468,11 @@ public partial class MainWindow : Window
         var transactions = _store.ListTransactions();
         var portfolio = PortfolioCalculator.Calculate(transactions);
 
+        TrackedBalanceText.Text = Money(portfolio.InvestedTotal, portfolio.BaseCurrency);
         InvestedText.Text = Money(portfolio.InvestedTotal, portfolio.BaseCurrency);
         RealizedPnlText.Text = Money(portfolio.RealizedPnlTotal, portfolio.BaseCurrency);
         FeesText.Text = Money(portfolio.TotalFees, portfolio.BaseCurrency);
-        TransactionCountText.Text = portfolio.Transactions.Count.ToString(FrenchCulture);
+        UpdateDataConfidence(portfolio);
 
         PositionsGrid.ItemsSource = portfolio.Positions.Select(position => new PositionRow(
             position.Symbol,
@@ -430,6 +497,54 @@ public partial class MainWindow : Window
         {
             DataFeedbackText.Text = string.Join(Environment.NewLine, portfolio.Warnings);
         }
+    }
+
+    private void PositionsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (PositionsGrid.SelectedItem is not PositionRow position)
+        {
+            return;
+        }
+
+        var transactions = _store.ListTransactions()
+            .Where(transaction => transaction.Symbol.Equals(position.Symbol, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        AssetXrayTitleText.Text = $"{position.Symbol} X-Ray";
+        AssetXraySubtitleText.Text = "Transactions ledger qui expliquent cette position.";
+        AssetXrayConfidenceText.Text = transactions.Count == 0 ? "A verifier" : "Ledger";
+        AssetXrayQuantityText.Text = $"Quantite: {position.Quantity}";
+        AssetXrayAverageText.Text = $"Prix moyen: {position.AverageCost}";
+        AssetXrayCostText.Text = $"Cout: {position.InvestedCost}";
+        AssetXrayPnlText.Text = $"PnL realise: {position.RealizedPnl}";
+
+        AssetTransactionsGrid.ItemsSource = transactions.Select(transaction => new TransactionRow(
+            transaction.Id,
+            transaction.ExecutedAt.ToLocalTime().ToString("g", FrenchCulture),
+            transaction.Side.ToString(),
+            transaction.Symbol,
+            FormatNumber(transaction.Quantity),
+            Money(transaction.UnitPrice, transaction.QuoteCurrency),
+            Money(transaction.FeeAmount, transaction.FeeCurrency),
+            transaction.Source,
+            transaction.Note)).ToList();
+    }
+
+    private void UpdateDataConfidence(PortfolioSnapshot portfolio)
+    {
+        var pendingImports = _binanceImportEvents.Count(row => row.Status == BinanceImportStatus.Pending);
+        var blockedImports = _binanceImportEvents.Count(row => row.Status == BinanceImportStatus.Rejected || row.Status == BinanceImportStatus.Ignored);
+        var warnings = portfolio.Warnings.Count;
+
+        if (warnings == 0 && pendingImports == 0)
+        {
+            DataConfidenceText.Text = "OK";
+            DataConfidenceHintText.Text = $"{portfolio.Transactions.Count.ToString(FrenchCulture)} transaction(s) ledger.";
+            return;
+        }
+
+        DataConfidenceText.Text = "Partiel";
+        DataConfidenceHintText.Text = $"{warnings} alerte(s), {pendingImports} a confirmer, {blockedImports} hors ledger.";
     }
 
     private static string Money(decimal value, string currency) =>
