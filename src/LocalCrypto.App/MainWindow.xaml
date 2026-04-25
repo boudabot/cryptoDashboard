@@ -1,22 +1,31 @@
 <Window x:Class="LocalCrypto.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="localCrypto" Height="820" Width="1220" MinHeight="720" MinWidth="1040"
-        Background="#F6F4EF" WindowStartupLocation="CenterScreen">
+        Title="localCrypto" Height="840" Width="1260" MinHeight="720" MinWidth="1080"
+        Background="#090E18" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Foreground" Value="#E5E7EB" />
         </Style>
         <Style TargetType="Button">
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="Margin" Value="0,8,8,0" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="#182235" />
+            <Setter Property="Foreground" Value="#E5E7EB" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="Margin" Value="0,4,12,10" />
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="MinWidth" Value="160" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="Foreground" Value="#E5E7EB" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="CaretBrush" Value="#E5E7EB" />
         </Style>
         <Style TargetType="ComboBox">
             <Setter Property="Margin" Value="0,4,12,10" />
@@ -24,12 +33,46 @@
             <Setter Property="MinWidth" Value="160" />
         </Style>
         <Style x:Key="Panel" TargetType="Border">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#DCD7CC" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#23314A" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="18" />
             <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="MetricPanel" TargetType="Border" BasedOn="{StaticResource Panel}">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+        </Style>
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#A8B3C7" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="Background" Value="#F0B90B" />
+            <Setter Property="Foreground" Value="#111827" />
+            <Setter Property="BorderBrush" Value="#F0B90B" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#22C55E" />
+            <Setter Property="BorderBrush" Value="#22C55E" />
+            <Setter Property="Foreground" Value="#07111F" />
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#7F1D1D" />
+            <Setter Property="BorderBrush" Value="#991B1B" />
+            <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="DarkGridHeader" TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#111827" />
@@ -44,120 +87,234 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="6,4" />
         </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="#0B101B" />
+            <Setter Property="BorderBrush" Value="#263244" />
+            <Setter Property="Foreground" Value="#E5E7EB" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Foreground" Value="#E5E7EB" />
+            <Setter Property="Background" Value="#111827" />
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="244" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#1F2933" Padding="22">
+        <Border Grid.Column="0" Background="#111A29" Padding="20">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="localCrypto" Foreground="White" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="Windows ledger-first" Foreground="#B8C2CC" Margin="0,4,0,28" />
-                    <TextBlock Text="V0.1.2 WPF" Foreground="#D7B46A" FontWeight="SemiBold" />
-                    <TextBlock Text="Sans web, sans localhost" Foreground="#B8C2CC" Margin="0,4,0,28" />
-                    <Button Content="Tableau de bord" Tag="Dashboard" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
-                    <Button Content="Actifs" Tag="Positions" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
-                    <Button Content="Imports" Tag="Imports" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
-                    <Button Content="Donnees" Tag="Data" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
+                    <TextBlock Text="localCrypto" Foreground="White" FontSize="26" FontWeight="SemiBold" />
+                    <TextBlock Text="Cockpit ledger local" Foreground="#8FA1BD" Margin="0,4,0,26" />
+
+                    <TextBlock Text="V0.1.2 WPF" Foreground="#F0B90B" FontWeight="SemiBold" />
+                    <TextBlock Text="SQLite local-first" Foreground="#8FA1BD" Margin="0,4,0,28" />
+
+                    <Button Content="Tableau de bord" Tag="Dashboard" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Background="#1C273A" Foreground="White" />
+                    <Button Content="Positions" Tag="Positions" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
+                    <Button Content="Import Studio" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
+                    <Button Content="Donnees" Tag="Data" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Bottom">
-                    <TextBlock Text="Source de verite" Foreground="#B8C2CC" />
-                    <TextBlock x:Name="DatabasePathText" TextWrapping="Wrap" Foreground="White" Margin="0,6,0,0" />
+                    <Border Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Source de verite" Foreground="#8FA1BD" FontSize="12" />
+                            <TextBlock x:Name="DatabasePathText" TextWrapping="Wrap" Foreground="#E5E7EB" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="26">
-                <TextBlock x:Name="DashboardAnchor" Text="Portefeuille" FontSize="30" FontWeight="SemiBold" Foreground="#17212B" />
-                <TextBlock Text="Les positions sont reconstruites depuis les transactions SQLite locales." Foreground="#52606D" Margin="0,4,0,20" />
+        <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto" Background="#090E18">
+            <StackPanel Margin="24">
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Name="DashboardAnchor" Text="Tableau de bord" FontSize="30" FontWeight="SemiBold" Foreground="White" />
+                        <TextBlock Text="Lecture locale du ledger SQLite. Les prix live ne sont pas encore utilises." Foreground="#8FA1BD" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#0F172A" BorderBrush="#23314A" BorderThickness="1" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" />
+                            <TextBlock Text="SQLite actif" Foreground="#CBD5E1" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
-                <UniformGrid Columns="5" Margin="0,0,0,14">
-                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                <UniformGrid Columns="6" Margin="0,0,0,14">
+                    <Border Style="{StaticResource MetricPanel}">
                         <StackPanel>
-                            <TextBlock Text="Portefeuille suivi" Foreground="#52606D" />
-                            <TextBlock x:Name="TrackedBalanceText" FontSize="24" FontWeight="SemiBold" />
-                            <TextBlock Text="hors prix live" Foreground="#7B8794" FontSize="11" />
+                            <TextBlock Text="Actifs suivis" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="AssetCountText" FontSize="25" FontWeight="SemiBold" Foreground="White" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                    <Border Style="{StaticResource MetricPanel}">
                         <StackPanel>
-                            <TextBlock Text="Investi" Foreground="#52606D" />
-                            <TextBlock x:Name="InvestedText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="Transactions" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="LedgerTransactionCountText" FontSize="25" FontWeight="SemiBold" Foreground="White" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                    <Border Style="{StaticResource MetricPanel}">
                         <StackPanel>
-                            <TextBlock Text="PnL realise" Foreground="#52606D" />
-                            <TextBlock x:Name="RealizedPnlText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="Cout suivi" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="TrackedBalanceText" FontSize="25" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="hors prix live" Foreground="#64748B" FontSize="11" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                    <Border Style="{StaticResource MetricPanel}">
                         <StackPanel>
-                            <TextBlock Text="Frais suivis" Foreground="#52606D" />
-                            <TextBlock x:Name="FeesText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="PnL realise" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="RealizedPnlText" FontSize="25" FontWeight="SemiBold" Foreground="#22C55E" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}">
+                    <Border Style="{StaticResource MetricPanel}">
                         <StackPanel>
-                            <TextBlock Text="Confiance" Foreground="#52606D" />
-                            <TextBlock x:Name="DataConfidenceText" FontSize="24" FontWeight="SemiBold" />
-                            <TextBlock x:Name="DataConfidenceHintText" Foreground="#7B8794" FontSize="11" TextWrapping="Wrap" />
+                            <TextBlock Text="Frais suivis" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="FeesText" FontSize="25" FontWeight="SemiBold" Foreground="White" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource MetricPanel}" Margin="0">
+                        <StackPanel>
+                            <TextBlock Text="Confiance" Foreground="#8FA1BD" />
+                            <TextBlock x:Name="DataConfidenceText" FontSize="25" FontWeight="SemiBold" Foreground="#FBBF24" />
+                            <TextBlock x:Name="DataConfidenceHintText" Foreground="#64748B" FontSize="11" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </UniformGrid>
 
                 <Border x:Name="PositionsAnchor" Style="{StaticResource Panel}">
-                    <StackPanel>
-                        <TextBlock Text="Positions" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-                        <DataGrid x:Name="PositionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="130" SelectionChanged="PositionsGrid_SelectionChanged">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Actif" Binding="{Binding Symbol}" Width="*" />
-                                <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
-                                <DataGridTextColumn Header="Prix moyen" Binding="{Binding AverageCost}" Width="*" />
-                                <DataGridTextColumn Header="Cout investi" Binding="{Binding InvestedCost}" Width="*" />
-                                <DataGridTextColumn Header="PnL realise" Binding="{Binding RealizedPnl}" Width="*" />
-                                <DataGridTextColumn Header="Frais" Binding="{Binding Fees}" Width="*" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
-                </Border>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="0.95*" />
+                        </Grid.ColumnDefinitions>
 
-                <Border x:Name="AssetXrayPanel" Style="{StaticResource Panel}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,12">
+                        <Grid Grid.ColumnSpan="3" Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock x:Name="AssetXrayTitleText" Text="Asset X-Ray" FontSize="20" FontWeight="SemiBold" />
-                                <TextBlock x:Name="AssetXraySubtitleText" Text="Selectionne un actif pour voir les transactions qui expliquent la position." Foreground="#52606D" />
+                                <TextBlock Text="Positions" FontSize="22" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock Text="Cartes basees uniquement sur les transactions ledger locales." Foreground="#8FA1BD" Margin="0,3,0,0" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" x:Name="AssetXrayConfidenceText" Foreground="#B45309" FontWeight="SemiBold" />
+                            <TextBlock x:Name="PositionsEmptyText" Grid.Column="1" Text="Aucune position suivie" Foreground="#64748B" VerticalAlignment="Center" />
                         </Grid>
-                        <UniformGrid Columns="4" Margin="0,0,0,12">
-                            <TextBlock x:Name="AssetXrayQuantityText" />
-                            <TextBlock x:Name="AssetXrayAverageText" />
-                            <TextBlock x:Name="AssetXrayCostText" />
-                            <TextBlock x:Name="AssetXrayPnlText" />
-                        </UniformGrid>
-                        <DataGrid x:Name="AssetTransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="120">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="150" />
-                                <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="70" />
-                                <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
-                                <DataGridTextColumn Header="Prix" Binding="{Binding UnitPrice}" Width="*" />
-                                <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="*" />
-                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="430">
+                            <ItemsControl x:Name="PositionCardsItems">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="52" />
+                                                    <ColumnDefinition Width="1.2*" />
+                                                    <ColumnDefinition Width="1*" />
+                                                    <ColumnDefinition Width="1*" />
+                                                    <ColumnDefinition Width="1*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="38" Height="38" CornerRadius="19" Background="{Binding Accent}">
+                                                    <TextBlock Text="{Binding Logo}" Foreground="#0B101B" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Symbol}" Foreground="White" FontSize="16" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding AssetName}" Foreground="#8FA1BD" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="Quantite" Foreground="#64748B" FontSize="12" />
+                                                    <TextBlock Text="{Binding Quantity}" Foreground="White" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3">
+                                                    <TextBlock Text="Prix moyen achat" Foreground="#64748B" FontSize="12" />
+                                                    <TextBlock Text="{Binding AverageCost}" Foreground="White" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="4">
+                                                    <TextBlock Text="PnL realise" Foreground="#64748B" FontSize="12" />
+                                                    <TextBlock Text="{Binding RealizedPnl}" Foreground="{Binding RealizedPnlBrush}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <Button Grid.Column="5" Content="Explorer" Tag="{Binding Symbol}" Click="PositionCard_Click" Style="{StaticResource PrimaryButton}" Padding="10,6" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <Border Grid.Row="1" Grid.Column="2" x:Name="AssetXrayPanel" Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="AssetXrayTitleText" Text="Asset X-Ray" FontSize="20" FontWeight="SemiBold" Foreground="White" />
+                                        <TextBlock x:Name="AssetXraySubtitleText" Text="Selectionne un actif pour voir sa preuve ledger." Foreground="#8FA1BD" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="9,5">
+                                        <TextBlock x:Name="AssetXrayConfidenceText" Foreground="#FBBF24" FontWeight="SemiBold" />
+                                    </Border>
+                                </Grid>
+
+                                <UniformGrid Columns="2" Margin="0,0,0,14">
+                                    <Border Background="#111827" CornerRadius="8" Padding="12" Margin="0,0,8,8">
+                                        <StackPanel>
+                                            <TextBlock Text="Quantite" Foreground="#64748B" />
+                                            <TextBlock x:Name="AssetXrayQuantityText" Foreground="White" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#111827" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <StackPanel>
+                                            <TextBlock Text="Prix moyen achat" Foreground="#64748B" />
+                                            <TextBlock x:Name="AssetXrayAverageText" Foreground="White" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#111827" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="Cout investi" Foreground="#64748B" />
+                                            <TextBlock x:Name="AssetXrayCostText" Foreground="White" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#111827" CornerRadius="8" Padding="12">
+                                        <StackPanel>
+                                            <TextBlock Text="PnL realise" Foreground="#64748B" />
+                                            <TextBlock x:Name="AssetXrayPnlText" Foreground="#22C55E" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Border>
+                                </UniformGrid>
+
+                                <TextBlock Text="Transactions sources" Foreground="White" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <DataGrid x:Name="AssetTransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="160" MaxHeight="250"
+                                          Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
+                                          BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column"
+                                          ColumnHeaderStyle="{StaticResource DarkGridHeader}" CellStyle="{StaticResource DarkGridCell}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="125" />
+                                        <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="60" />
+                                        <DataGridTextColumn Header="Qte" Binding="{Binding Quantity}" Width="*" />
+                                        <DataGridTextColumn Header="Prix" Binding="{Binding UnitPrice}" Width="*" />
+                                        <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Border>
 
                 <Border x:Name="ImportsAnchor" Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="22" Margin="0,0,0,14">
@@ -168,12 +325,12 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Import Binance" Foreground="White" FontSize="24" FontWeight="SemiBold" />
-                                <TextBlock Text="Dashboard local: exports cumules, actifs resumes, ordres regroupes avant ecriture SQLite." Foreground="#94A3B8" Margin="0,4,0,0" />
+                                <TextBlock Text="Import Studio" Foreground="White" FontSize="24" FontWeight="SemiBold" />
+                                <TextBlock Text="Exports Binance cumules, dedoublonnes et valides avant ecriture SQLite." Foreground="#94A3B8" Margin="0,4,0,0" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Content="Ajouter export" Click="LoadBinanceImport_Click" Background="#F0B90B" Foreground="#111827" FontWeight="SemiBold" />
-                                <Button Content="Valider trades" Click="WriteImportableTrades_Click" Background="#22C55E" Foreground="#07111F" FontWeight="SemiBold" />
+                                <Button Content="Ajouter export" Click="LoadBinanceImport_Click" Style="{StaticResource PrimaryButton}" />
+                                <Button Content="Valider trades" Click="WriteImportableTrades_Click" Style="{StaticResource SuccessButton}" />
                                 <Button Content="Reinitialiser" Click="ClearBinanceImports_Click" Background="#1F2937" Foreground="White" />
                             </StackPanel>
                         </Grid>
@@ -181,7 +338,7 @@
                         <UniformGrid Columns="5" Margin="0,0,0,16">
                             <Border Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,10,0">
                                 <StackPanel>
-                                    <TextBlock Text="Volume trade" Foreground="#94A3B8" />
+                                    <TextBlock Text="Volume import" Foreground="#94A3B8" />
                                     <TextBlock x:Name="ImportVolumeText" Text="0" Foreground="White" FontSize="24" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Border>
@@ -218,19 +375,19 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="Crypto" Foreground="#CBD5E1" />
-                                <TextBox x:Name="ImportAssetFilterBox" CharacterCasing="Upper" TextChanged="ImportFilter_TextChanged" Background="#0F172A" Foreground="White" BorderBrush="#475569" />
+                                <TextBox x:Name="ImportAssetFilterBox" CharacterCasing="Upper" TextChanged="ImportFilter_TextChanged" />
                             </StackPanel>
                             <WrapPanel Grid.Column="1" Margin="12,18,0,0">
-                                <Button Content="Tout" Tag="Tout" Click="ImportViewFilter_Click" Background="#F0B90B" Foreground="#111827" FontWeight="SemiBold" Padding="12,6" />
-                                <Button Content="Trades" Tag="Trades" Click="ImportViewFilter_Click" Background="#1F2937" Foreground="White" Padding="12,6" />
-                                <Button Content="Rewards" Tag="Earn / Rewards" Click="ImportViewFilter_Click" Background="#1F2937" Foreground="White" Padding="12,6" />
-                                <Button Content="Internes" Tag="Internes" Click="ImportViewFilter_Click" Background="#1F2937" Foreground="White" Padding="12,6" />
-                                <Button Content="A confirmer" Tag="A confirmer" Click="ImportViewFilter_Click" Background="#1F2937" Foreground="White" Padding="12,6" />
+                                <Button Content="Tout" Tag="Tout" Click="ImportViewFilter_Click" Style="{StaticResource PrimaryButton}" Padding="12,6" />
+                                <Button Content="Trades" Tag="Trades" Click="ImportViewFilter_Click" Padding="12,6" />
+                                <Button Content="Rewards" Tag="Earn / Rewards" Click="ImportViewFilter_Click" Padding="12,6" />
+                                <Button Content="Internes" Tag="Internes" Click="ImportViewFilter_Click" Padding="12,6" />
+                                <Button Content="A confirmer" Tag="A confirmer" Click="ImportViewFilter_Click" Padding="12,6" />
                             </WrapPanel>
                         </Grid>
                         <TextBlock x:Name="ImportFileText" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,12" />
 
-                        <TabControl x:Name="ImportTabs" Background="#0B101B" BorderBrush="#263244" Foreground="White">
+                        <TabControl x:Name="ImportTabs" BorderBrush="#263244">
                             <TabItem x:Name="ImportSummaryTab" Header="Resume">
                                 <Grid Background="#0B101B" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>
@@ -321,7 +478,7 @@
                                                         <TextBlock Text="A confirmer" Foreground="#64748B" />
                                                         <TextBlock Text="{Binding PendingCount}" Foreground="#FBBF24" FontWeight="SemiBold" />
                                                     </StackPanel>
-                                                    <Button Grid.Column="5" Content="Voir ordres" Tag="{Binding Asset}" Click="ImportAsset_Click" Background="#F0B90B" Foreground="#111827" FontWeight="SemiBold" Padding="10,6" Margin="0" />
+                                                    <Button Grid.Column="5" Content="Voir ordres" Tag="{Binding Asset}" Click="ImportAsset_Click" Style="{StaticResource PrimaryButton}" Padding="10,6" Margin="0" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -345,7 +502,7 @@
                                         <DataGridTextColumn Header="Source" Binding="{Binding SourceKind}" Width="105" />
                                         <DataGridTextColumn Header="ID ordre" Binding="{Binding ExternalId}" Width="110" />
                                         <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="105" />
-                                        <DataGridTextColumn Header="Decision" Binding="{Binding Reason}" Width="2*" />
+                                        <DataGridTextColumn Header="Motif" Binding="{Binding Reason}" Width="2*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </TabItem>
@@ -357,23 +514,27 @@
 
                 <Border x:Name="DataAnchor" Style="{StaticResource Panel}">
                     <StackPanel>
-                        <TextBlock Text="Donnees" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-                        <TextBlock Text="Source de verite SQLite active" Foreground="#52606D" />
+                        <TextBlock Text="Donnees" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
+                        <TextBlock Text="Source de verite SQLite active" Foreground="#8FA1BD" />
                         <TextBlock x:Name="DataFileText" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,4,0,12" />
-                        <TextBlock Text="Ancien cache Electron: hors flux principal WPF. Ne pas l'utiliser comme source portefeuille." Foreground="#52606D" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <TextBlock Text="Ancien cache Electron: hors flux principal WPF. Ne pas l'utiliser comme source portefeuille." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,12" />
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="Sauvegarder SQLite" Click="BackupDatabase_Click" Background="#047857" Foreground="White" />
-                            <Button Content="Restaurer SQLite" Click="RestoreDatabase_Click" Background="#B45309" Foreground="White" />
-                            <Button Content="Vider ledger" Click="ClearLedger_Click" Background="#991B1B" Foreground="White" />
+                            <Button Content="Sauvegarder SQLite" Click="BackupDatabase_Click" Style="{StaticResource SuccessButton}" />
+                            <Button Content="Restaurer SQLite" Click="RestoreDatabase_Click" Style="{StaticResource PrimaryButton}" />
+                            <Button Content="Vider ledger" Click="ClearLedger_Click" Style="{StaticResource DangerButton}" />
                         </StackPanel>
-                        <TextBlock x:Name="DataFeedbackText" Foreground="#52606D" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock x:Name="DataFeedbackText" Foreground="#8FA1BD" Margin="0,8,0,0" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Panel}">
                     <StackPanel>
-                        <TextBlock Text="Journal" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-                        <DataGrid x:Name="TransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="220">
+                        <TextBlock Text="Journal ledger" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4" />
+                        <TextBlock Text="Table d'audit. Le quotidien doit passer par Positions et Import Studio." Foreground="#8FA1BD" Margin="0,0,0,12" />
+                        <DataGrid x:Name="TransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="180" MaxHeight="280"
+                                  Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
+                                  BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column"
+                                  ColumnHeaderStyle="{StaticResource DarkGridHeader}" CellStyle="{StaticResource DarkGridCell}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="150" />
                                 <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="80" />
@@ -386,7 +547,7 @@
                                 <DataGridTemplateColumn Header="" Width="110">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Supprimer" Tag="{Binding Id}" Click="DeleteTransaction_Click" Padding="8,4" Margin="0" />
+                                            <Button Content="Supprimer" Tag="{Binding Id}" Click="DeleteTransaction_Click" Padding="8,4" Margin="0" Background="#1F2937" Foreground="#E5E7EB" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

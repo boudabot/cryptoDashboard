@@ -478,14 +478,7 @@ public partial class MainWindow : Window
 
         var deleted = _store.ClearTransactions();
         DataFeedbackText.Text = $"{deleted} transaction(s) supprimee(s). Le portefeuille est pret pour un import propre.";
-        AssetTransactionsGrid.ItemsSource = null;
-        AssetXrayTitleText.Text = "Asset X-Ray";
-        AssetXraySubtitleText.Text = "Selectionne un actif pour voir les transactions qui expliquent la position.";
-        AssetXrayConfidenceText.Text = string.Empty;
-        AssetXrayQuantityText.Text = string.Empty;
-        AssetXrayAverageText.Text = string.Empty;
-        AssetXrayCostText.Text = string.Empty;
-        AssetXrayPnlText.Text = string.Empty;
+        ResetAssetXray();
         RefreshPortfolio();
     }
 
@@ -495,18 +488,17 @@ public partial class MainWindow : Window
         var portfolio = PortfolioCalculator.Calculate(transactions);
 
         TrackedBalanceText.Text = Money(portfolio.InvestedTotal, portfolio.BaseCurrency);
-        InvestedText.Text = Money(portfolio.InvestedTotal, portfolio.BaseCurrency);
+        AssetCountText.Text = portfolio.Positions.Count.ToString(FrenchCulture);
+        LedgerTransactionCountText.Text = portfolio.Transactions.Count.ToString(FrenchCulture);
         RealizedPnlText.Text = Money(portfolio.RealizedPnlTotal, portfolio.BaseCurrency);
         FeesText.Text = Money(portfolio.TotalFees, portfolio.BaseCurrency);
         UpdateDataConfidence(portfolio);
 
-        PositionsGrid.ItemsSource = portfolio.Positions.Select(position => new PositionRow(
-            position.Symbol,
-            FormatNumber(position.Quantity),
-            Money(position.AverageCost, position.QuoteCurrency),
-            Money(position.InvestedCost, position.QuoteCurrency),
-            Money(position.RealizedPnl, position.QuoteCurrency),
-            Money(position.Fees, position.QuoteCurrency))).ToList();
+        var positionRows = portfolio.Positions
+            .Select(position => ToPositionCardRow(position, portfolio))
+            .ToList();
+        PositionCardsItems.ItemsSource = positionRows;
+        PositionsEmptyText.Visibility = positionRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         TransactionsGrid.ItemsSource = transactions.Select(transaction => new TransactionRow(
             transaction.Id,
@@ -523,26 +515,51 @@ public partial class MainWindow : Window
         {
             DataFeedbackText.Text = string.Join(Environment.NewLine, portfolio.Warnings);
         }
+
+        if (positionRows.Count == 0)
+        {
+            ResetAssetXray();
+        }
+        else if (AssetTransactionsGrid.ItemsSource is null)
+        {
+            ShowAssetXray(positionRows[0].Symbol);
+        }
     }
 
-    private void PositionsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void PositionCard_Click(object sender, RoutedEventArgs e)
     {
-        if (PositionsGrid.SelectedItem is not PositionRow position)
+        if (sender is Button button && button.Tag is string symbol)
         {
+            ShowAssetXray(symbol);
+        }
+    }
+
+    private void ShowAssetXray(string symbol)
+    {
+        var allTransactions = _store.ListTransactions();
+        var portfolio = PortfolioCalculator.Calculate(allTransactions);
+        var position = portfolio.Positions.FirstOrDefault(item => item.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+        var transactions = allTransactions
+            .Where(transaction => transaction.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (position is null)
+        {
+            ResetAssetXray();
             return;
         }
 
-        var transactions = _store.ListTransactions()
-            .Where(transaction => transaction.Symbol.Equals(position.Symbol, StringComparison.OrdinalIgnoreCase))
+        var warnings = portfolio.Warnings
+            .Where(warning => warning.StartsWith($"{position.Symbol}:", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         AssetXrayTitleText.Text = $"{position.Symbol} X-Ray";
-        AssetXraySubtitleText.Text = "Transactions ledger qui expliquent cette position.";
-        AssetXrayConfidenceText.Text = transactions.Count == 0 ? "A verifier" : "Ledger";
-        AssetXrayQuantityText.Text = $"Quantite: {position.Quantity}";
-        AssetXrayAverageText.Text = $"Prix moyen: {position.AverageCost}";
-        AssetXrayCostText.Text = $"Cout: {position.InvestedCost}";
-        AssetXrayPnlText.Text = $"PnL realise: {position.RealizedPnl}";
+        AssetXraySubtitleText.Text = $"{position.AssetName} - preuve ledger avec {transactions.Count.ToString(FrenchCulture)} transaction(s).";
+        AssetXrayConfidenceText.Text = warnings.Count == 0 ? "OK" : "A verifier";
+        AssetXrayQuantityText.Text = FormatNumber(position.Quantity);
+        AssetXrayAverageText.Text = Money(position.AverageCost, position.QuoteCurrency);
+        AssetXrayCostText.Text = Money(position.InvestedCost, position.QuoteCurrency);
+        AssetXrayPnlText.Text = Money(position.RealizedPnl, position.QuoteCurrency);
 
         AssetTransactionsGrid.ItemsSource = transactions.Select(transaction => new TransactionRow(
             transaction.Id,
@@ -554,6 +571,42 @@ public partial class MainWindow : Window
             Money(transaction.FeeAmount, transaction.FeeCurrency),
             transaction.Source,
             transaction.Note)).ToList();
+    }
+
+    private void ResetAssetXray()
+    {
+        AssetTransactionsGrid.ItemsSource = null;
+        AssetXrayTitleText.Text = "Asset X-Ray";
+        AssetXraySubtitleText.Text = "Selectionne un actif pour voir sa preuve ledger.";
+        AssetXrayConfidenceText.Text = "-";
+        AssetXrayQuantityText.Text = "-";
+        AssetXrayAverageText.Text = "-";
+        AssetXrayCostText.Text = "-";
+        AssetXrayPnlText.Text = "-";
+    }
+
+    private static PositionCardRow ToPositionCardRow(PositionSnapshot position, PortfolioSnapshot portfolio)
+    {
+        var hasWarning = portfolio.Warnings.Any(warning => warning.StartsWith($"{position.Symbol}:", StringComparison.OrdinalIgnoreCase));
+        var pnlBrush = position.RealizedPnl switch
+        {
+            < 0m => "#F87171",
+            > 0m => "#22C55E",
+            _ => "#CBD5E1"
+        };
+
+        return new PositionCardRow(
+            position.Symbol,
+            position.AssetName,
+            LogoFor(position.Symbol),
+            AccentFor(position.Symbol),
+            FormatNumber(position.Quantity),
+            Money(position.AverageCost, position.QuoteCurrency),
+            Money(position.InvestedCost, position.QuoteCurrency),
+            Money(position.RealizedPnl, position.QuoteCurrency),
+            Money(position.Fees, position.QuoteCurrency),
+            pnlBrush,
+            hasWarning ? "A verifier" : "OK");
     }
 
     private void UpdateDataConfidence(PortfolioSnapshot portfolio)
@@ -599,13 +652,18 @@ public partial class MainWindow : Window
             _ => status.ToString()
         };
 
-    private sealed record PositionRow(
+    private sealed record PositionCardRow(
         string Symbol,
+        string AssetName,
+        string Logo,
+        string Accent,
         string Quantity,
         string AverageCost,
         string InvestedCost,
         string RealizedPnl,
-        string Fees);
+        string Fees,
+        string RealizedPnlBrush,
+        string Confidence);
 
     private sealed record TransactionRow(
         string Id,
