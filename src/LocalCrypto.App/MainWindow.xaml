@@ -340,10 +340,12 @@
                                         <DataGridTextColumn Header="Crypto" Binding="{Binding Asset}" Width="80" />
                                         <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="110" />
                                         <DataGridTextColumn Header="Contrepartie" Binding="{Binding Quote}" Width="130" />
-                                        <DataGridTextColumn Header="Prix moyen" Binding="{Binding UnitPrice}" Width="120" />
+                                        <DataGridTextColumn Header="Prix execution" Binding="{Binding UnitPrice}" Width="125" />
                                         <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="110" />
+                                        <DataGridTextColumn Header="Source" Binding="{Binding SourceKind}" Width="105" />
+                                        <DataGridTextColumn Header="ID ordre" Binding="{Binding ExternalId}" Width="110" />
                                         <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="105" />
-                                        <DataGridTextColumn Header="Resume" Binding="{Binding Reason}" Width="2*" />
+                                        <DataGridTextColumn Header="Decision" Binding="{Binding Reason}" Width="2*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </TabItem>

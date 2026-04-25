@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using LocalCrypto.Core;
@@ -82,21 +81,7 @@ public sealed class BinanceLedgerMapper
 
     private static string StableId(BinanceImportEvent importEvent)
     {
-        var parts = new[]
-        {
-            "binance",
-            importEvent.ExecutedAt?.ToString("O", CultureInfo.InvariantCulture) ?? "",
-            importEvent.Kind,
-            importEvent.Asset,
-            importEvent.Quantity?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.QuoteCurrency,
-            importEvent.QuoteAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.UnitPrice?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.FeeAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.FeeCurrency
-        };
-
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("|", parts)));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(BinanceImportReconciler.MovementKey(importEvent)));
         return "binance-" + Convert.ToHexString(bytes)[..16].ToLowerInvariant();
     }
 

@@ -14,9 +14,9 @@ public partial class MainWindow : Window
     private readonly SqliteLedgerStore _store;
     private readonly BinanceImportPreviewer _binanceImportPreviewer = new();
     private readonly BinanceLedgerMapper _binanceLedgerMapper = new();
+    private readonly BinanceImportReconciler _binanceImportReconciler = new();
     private readonly List<BinanceImportEvent> _binanceImportEvents = [];
     private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _loadedImportEventSignatures = new(StringComparer.OrdinalIgnoreCase);
     private string _importViewFilter = "Tout";
     private int _loadedImportSourceRows;
 
@@ -66,9 +66,15 @@ public partial class MainWindow : Window
                 return;
             }
 
+            if (dialog.FileNames.Length > 10)
+            {
+                ImportFeedbackText.Text = "Import limite a 10 fichiers a la fois pour garder une reconciliation lisible.";
+                return;
+            }
+
             var addedFiles = 0;
-            var addedEvents = 0;
-            var duplicateEvents = 0;
+            var eventCountBefore = _binanceImportEvents.Count;
+            var emptyExports = 0;
 
             foreach (var selectedFile in dialog.FileNames)
             {
@@ -79,20 +85,22 @@ public partial class MainWindow : Window
                 }
 
                 var preview = _binanceImportPreviewer.Preview(fullPath);
-                var newEvents = preview.Events
-                    .Where(importEvent => _loadedImportEventSignatures.Add(ImportEventSignature(importEvent)))
-                    .ToList();
                 _loadedImportSourceRows += preview.TotalRows;
-                _binanceImportEvents.AddRange(newEvents);
+                _binanceImportEvents.AddRange(preview.Events);
+                if (preview.Events.Count == 0 && preview.IgnoredRows > 0)
+                {
+                    emptyExports++;
+                }
                 addedFiles++;
-                addedEvents += newEvents.Count;
-                duplicateEvents += preview.Events.Count - newEvents.Count;
             }
 
-            RenumberImportEvents();
+            var duplicateEvents = ReconcileLoadedImportEvents();
+            var addedEvents = Math.Max(0, _binanceImportEvents.Count - eventCountBefore);
             ImportFeedbackText.Text = addedFiles == 0
                 ? "Aucun nouveau fichier ajoute."
-                : $"{addedFiles} fichier(s) ajoute(s), {addedEvents} nouvel evenement(s), {duplicateEvents} doublon(s) ignores. Aucune ecriture SQLite.";
+                : emptyExports > 0 && addedEvents == 0
+                    ? $"{addedFiles} fichier(s) ajoute(s), export vide detecte, rien a importer. Aucune ecriture SQLite."
+                    : $"{addedFiles} fichier(s) ajoute(s), {addedEvents} evenement(s) conserves, {duplicateEvents} doublon(s) probables en quarantaine. Aucune ecriture SQLite.";
             RefreshImportDashboard();
         }
         catch (Exception exception)
@@ -104,11 +112,19 @@ public partial class MainWindow : Window
     private void ClearBinanceImports_Click(object sender, RoutedEventArgs e)
     {
         _loadedImportFiles.Clear();
-        _loadedImportEventSignatures.Clear();
         _binanceImportEvents.Clear();
         _loadedImportSourceRows = 0;
         ImportFeedbackText.Text = "Preview Binance reinitialisee.";
         RefreshImportDashboard();
+    }
+
+    private int ReconcileLoadedImportEvents()
+    {
+        var reconciliation = _binanceImportReconciler.Reconcile(_binanceImportEvents);
+        _binanceImportEvents.Clear();
+        _binanceImportEvents.AddRange(reconciliation.Accepted);
+        RenumberImportEvents();
+        return reconciliation.Duplicates.Count;
     }
 
     private void WriteImportableTrades_Click(object sender, RoutedEventArgs e)
@@ -276,25 +292,6 @@ public partial class MainWindow : Window
         _binanceImportEvents.AddRange(renumbered);
     }
 
-    private static string ImportEventSignature(BinanceImportEvent importEvent)
-    {
-        var parts = new[]
-        {
-            importEvent.ExecutedAt?.ToString("O", CultureInfo.InvariantCulture) ?? "",
-            importEvent.Kind,
-            importEvent.Asset,
-            importEvent.Quantity?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.QuoteCurrency,
-            importEvent.QuoteAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.UnitPrice?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.FeeAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
-            importEvent.FeeCurrency,
-            importEvent.Category.ToString()
-        };
-
-        return string.Join("|", parts);
-    }
-
     private BinancePreviewRow ToBinancePreviewRow(BinanceImportEvent row) =>
         new(
             row.EventNumber.ToString(FrenchCulture),
@@ -306,6 +303,8 @@ public partial class MainWindow : Window
             row.UnitPrice.HasValue ? $"{FormatNumber(row.UnitPrice.Value)} {row.QuoteCurrency}" : "-",
             row.FeeAmount.HasValue ? $"{FormatNumber(row.FeeAmount.Value)} {row.FeeCurrency}" : "-",
             row.SourceRows.ToString(FrenchCulture),
+            row.SourceKind,
+            string.IsNullOrWhiteSpace(row.ExternalId) ? "-" : row.ExternalId,
             StatusText(row.Status),
             row.Reason);
 
@@ -602,6 +601,8 @@ public partial class MainWindow : Window
         string UnitPrice,
         string Fee,
         string SourceRows,
+        string SourceKind,
+        string ExternalId,
         string Status,
         string Reason);
 

@@ -160,7 +160,11 @@ public sealed class BinanceImportPreviewer
             rows.Count,
             BinanceImportCategory.TradeLeg,
             status,
-            reason);
+            reason)
+        {
+            SourceKind = "TransactionHistory",
+            Pair = PairFor(assetRow?.Asset ?? "-", quoteRow?.Asset ?? "-")
+        };
     }
 
     private static BinanceImportEvent BuildAggregateEvent(int eventNumber, IReadOnlyList<BinanceImportRow> rows)
@@ -193,7 +197,10 @@ public sealed class BinanceImportPreviewer
                 BinanceImportCategory.InternalMovement => "Mouvements internes agreges, ignores pour le PnL.",
                 BinanceImportCategory.CashMovement => "Mouvement cash a garder hors PnL trade.",
                 _ => "Operation a mapper plus tard."
-            });
+            })
+        {
+            SourceKind = "TransactionHistory"
+        };
     }
 
     private static bool IsQuoteAsset(string asset) =>
@@ -201,6 +208,16 @@ public sealed class BinanceImportPreviewer
         asset.Equals("USD", StringComparison.OrdinalIgnoreCase) ||
         asset.Equals("USDC", StringComparison.OrdinalIgnoreCase) ||
         asset.Equals("USDT", StringComparison.OrdinalIgnoreCase);
+
+    private static string PairFor(string asset, string quoteCurrency)
+    {
+        if (string.IsNullOrWhiteSpace(asset) || asset == "-" || string.IsNullOrWhiteSpace(quoteCurrency) || quoteCurrency == "-")
+        {
+            return string.Empty;
+        }
+
+        return $"{asset.ToUpperInvariant()}{quoteCurrency.ToUpperInvariant()}";
+    }
 
     private static string EventKind(BinanceImportCategory category) =>
         category switch
@@ -537,7 +554,12 @@ public sealed class BinanceImportPreviewer
                 1,
                 BinanceImportCategory.TradeLeg,
                 executed.Amount is > 0m && total.Amount is > 0m ? BinanceImportStatus.Importable : BinanceImportStatus.Pending,
-                isAlphaOrder ? "Ordre Alpha execute: prix moyen Binance disponible." : "Ordre spot execute: prix moyen Binance disponible."));
+                isAlphaOrder ? "Ordre Alpha execute: prix moyen Binance disponible." : "Ordre spot execute: prix moyen Binance disponible.")
+            {
+                SourceKind = isAlphaOrder ? "AlphaOrder" : "SpotOrder",
+                ExternalId = Get(row, "Numero de commande"),
+                Pair = isAlphaOrder ? $"{executed.Asset}{total.Asset}" : Get(row, "Paire")
+            });
         }
 
         var sourceRows = rows.Count;
@@ -583,7 +605,11 @@ public sealed class BinanceImportPreviewer
                 status,
                 status == BinanceImportStatus.Importable
                     ? "Trade spot execute: prix, montant et frais Binance disponibles."
-                    : "Trade spot incomplet: a verifier avant import."));
+                    : "Trade spot incomplet: a verifier avant import.")
+            {
+                SourceKind = "SpotTrade",
+                Pair = Get(row, "Paire")
+            });
         }
 
         return new BinanceImportPreview(
@@ -642,7 +668,11 @@ public sealed class BinanceImportPreviewer
                 status,
                 status == BinanceImportStatus.Importable
                     ? "Auto-Invest execute: achat recurrent pret pour mapping ledger."
-                    : "Auto-Invest incomplet ou non execute: a verifier avant import."));
+                    : "Auto-Invest incomplet ou non execute: a verifier avant import.")
+            {
+                SourceKind = "AutoInvest",
+                Pair = PairFor(string.IsNullOrWhiteSpace(asset) ? quantity.Asset : asset, quoteCurrency)
+            });
         }
 
         return new BinanceImportPreview(
@@ -913,7 +943,14 @@ public sealed record BinanceImportEvent(
     int SourceRows,
     BinanceImportCategory Category,
     BinanceImportStatus Status,
-    string Reason);
+    string Reason)
+{
+    public string SourceKind { get; init; } = "Unknown";
+
+    public string ExternalId { get; init; } = string.Empty;
+
+    public string Pair { get; init; } = string.Empty;
+}
 
 internal sealed record ParsedBinanceRow(BinanceImportRow Row, string RawRemark);
 
