@@ -36,19 +36,21 @@ C:\Users\1oliv\Documents\localCryptoWpf-spike
 Branche active au moment de cette note:
 
 ```text
-codex/import-reconciliation
+dev
 ```
 
 Derniers commits connus:
 
 ```text
+2c31dbc Document handoff maintenance rule
 6dc3195 Add next chat handoff
 f2d268c Add ledger reset action
 16d60b3 Reconcile Binance import duplicates
 1faa400 Merge portfolio truth upgrade
 ```
 
-`dev` et `master` pointent sur `1faa400` avant merge de `codex/import-reconciliation`.
+`dev` contient `codex/import-reconciliation`.
+`master` pointe encore sur `1faa400` tant que la release stable n'a pas ete validee.
 
 Il n'y a pas de remote configure au moment de cette note.
 
