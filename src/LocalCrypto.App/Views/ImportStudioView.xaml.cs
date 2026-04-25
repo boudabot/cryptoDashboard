@@ -9,6 +9,7 @@ public partial class ImportStudioView : UserControl
     public event EventHandler? ValidateTradesRequested;
     public event EventHandler? ResetRequested;
     public event EventHandler? FiltersChanged;
+    private bool _compactMode;
 
     public ImportStudioView()
     {
@@ -53,6 +54,17 @@ public partial class ImportStudioView : UserControl
     public void SelectOrders() => ImportTabs.SelectedItem = ImportOrdersTab;
 
     public void SelectQuarantine() => ImportTabs.SelectedItem = ImportQuarantineTab;
+
+    public void SetCompactMode(bool compact)
+    {
+        if (_compactMode == compact)
+        {
+            return;
+        }
+
+        _compactMode = compact;
+        ImportMetricsGrid.Columns = compact ? 3 : 6;
+    }
 
     public void ClearAssetFilter()
     {

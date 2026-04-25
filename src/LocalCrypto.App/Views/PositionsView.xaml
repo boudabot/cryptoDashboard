@@ -16,14 +16,18 @@
                 <TextBlock x:Name="PositionsEmptyText" Grid.Column="1" Text="Aucune position ledger" Foreground="#64748B" VerticalAlignment="Center" />
             </Grid>
 
-            <Grid>
+            <Grid x:Name="PositionsContentGrid">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.2*" />
-                    <ColumnDefinition Width="18" />
-                    <ColumnDefinition Width="0.95*" />
+                    <ColumnDefinition x:Name="PositionsListColumn" Width="1.2*" />
+                    <ColumnDefinition x:Name="PositionsGapColumn" Width="18" />
+                    <ColumnDefinition x:Name="PositionsXrayColumn" Width="0.95*" />
                 </Grid.ColumnDefinitions>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="430">
+                <ScrollViewer x:Name="PositionListHost" Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" MaxHeight="430">
                     <ItemsControl x:Name="PositionCardsItems">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -33,7 +37,7 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <Border Grid.Column="2" x:Name="AssetXrayPanel" Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16">
+                <Border Grid.Row="0" Grid.Column="2" x:Name="AssetXrayPanel" Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16">
                     <StackPanel>
                         <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
@@ -98,31 +102,32 @@
                 </Border>
             </Grid>
 
-            <Border Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="Graphiques ledger simples" Foreground="White" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock Text="Vue locale basee uniquement sur les transactions validees. Pas de prix live." Foreground="#8FA1BD" Margin="0,3,0,12" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Cout suivi par devise" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ItemsControl x:Name="CostChartItems" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="Volume par actif" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ItemsControl x:Name="VolumeChartItems" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Margin="16,0,0,0">
-                            <TextBlock Text="PnL realise par actif" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ItemsControl x:Name="PnlChartItems" />
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
+            <Expander Header="Graphiques ledger simples" Foreground="#E5E7EB" Background="#0B101B" BorderBrush="#263244" IsExpanded="False" Margin="0,16,0,0">
+                <Border Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="Vue locale basee uniquement sur les transactions validees. Pas de prix live." Foreground="#8FA1BD" Margin="0,0,0,12" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Cout suivi par devise" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <ItemsControl x:Name="CostChartItems" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                                <TextBlock Text="Volume par actif" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <ItemsControl x:Name="VolumeChartItems" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="16,0,0,0">
+                                <TextBlock Text="PnL realise par actif" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <ItemsControl x:Name="PnlChartItems" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Expander>
         </StackPanel>
     </Border>
 </UserControl>

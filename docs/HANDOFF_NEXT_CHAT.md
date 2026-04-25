@@ -110,10 +110,11 @@ Ce qui existe deja:
 - build par branche
 - tests unitaires sur import, portfolio, clear ledger
 - UI decoupee en vues/controles WPF sur `codex/ux-design`
+- navigation UX separee par sections, avec groupes sidebar repliables type Binance
 - separation visuelle ledger valide / preview Binance
 - chips actifs import cliquables
 - quarantaine import en memoire pour doublons probables
-- graphiques ledger simples sans prix live
+- graphiques ledger simples sans prix live, replies par defaut
 
 Ce qui reste incomplet ou a corriger:
 
@@ -126,6 +127,7 @@ Ce qui reste incomplet ou a corriger:
 - `CONVERT`, `REWARD`, `INTERNAL`, `CASH` ne sont pas ecrits automatiquement dans le ledger
 - pas encore de vraie quarantaine persistante des imports
 - pas encore de preuve detaillee type "Pourquoi ce chiffre ?"
+- le polish responsive reste a affiner apres test utilisateur: petites largeurs, tables detail, densite des panneaux
 
 Regle importante: il vaut mieux manquer une ligne ambigue que l'ecrire deux fois.
 

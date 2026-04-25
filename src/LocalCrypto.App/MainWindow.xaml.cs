@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using LocalCrypto.Core;
 using LocalCrypto.Data;
 using Microsoft.Win32;
@@ -26,6 +27,8 @@ public partial class MainWindow : Window
         DataView.SetDatabasePath(_store.DatabasePath);
         RefreshImportDashboard();
         RefreshPortfolio();
+        ShowPage("Dashboard", DashboardNavButton);
+        UpdateResponsiveLayout();
     }
 
     private void NavigateSection_Click(object sender, RoutedEventArgs e)
@@ -35,16 +38,88 @@ public partial class MainWindow : Window
             return;
         }
 
-        FrameworkElement? section = target switch
+        ShowPage(target, button);
+    }
+
+    private void ToggleNavGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string target)
         {
-            "Dashboard" => DashboardView,
-            "Positions" => PositionsView,
-            "Imports" => ImportStudioView,
-            "Data" => DataView,
-            _ => null
+            return;
+        }
+
+        if (target == "Assets")
+        {
+            ToggleMenu(AssetsMenu, AssetsChevronText);
+        }
+        else if (target == "Orders")
+        {
+            ToggleMenu(OrdersMenu, OrdersChevronText);
+        }
+    }
+
+    private static void ToggleMenu(UIElement menu, TextBlock chevron)
+    {
+        var expanded = menu.Visibility == Visibility.Visible;
+        menu.Visibility = expanded ? Visibility.Collapsed : Visibility.Visible;
+        chevron.Text = expanded ? "+" : "-";
+    }
+
+    private void ShowPage(string target, Button? activeButton = null)
+    {
+        DashboardView.Visibility = target == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
+        PositionsView.Visibility = target == "Positions" ? Visibility.Visible : Visibility.Collapsed;
+        ImportStudioView.Visibility = target == "Imports" ? Visibility.Visible : Visibility.Collapsed;
+        DataView.Visibility = target == "Data" ? Visibility.Visible : Visibility.Collapsed;
+
+        SetActiveNavigation(activeButton ?? DefaultButtonFor(target));
+        MainScrollViewer.ScrollToHome();
+    }
+
+    private Button DefaultButtonFor(string target) => target switch
+    {
+        "Dashboard" => DashboardNavButton,
+        "Positions" => SpotNavButton,
+        "Imports" => ImportNavButton,
+        "Data" => DataNavButton,
+        _ => DashboardNavButton
+    };
+
+    private void SetActiveNavigation(Button activeButton)
+    {
+        var allButtons = new[]
+        {
+            DashboardNavButton,
+            AssetsOverviewNavButton,
+            SpotNavButton,
+            EarnNavButton,
+            AlphaNavButton,
+            ImportNavButton,
+            LedgerNavButton,
+            DataNavButton
         };
 
-        section?.BringIntoView();
+        foreach (var button in allButtons)
+        {
+            button.Background = Brushes.Transparent;
+            button.Foreground = new SolidColorBrush(Color.FromRgb(168, 179, 199));
+        }
+
+        activeButton.Background = new SolidColorBrush(Color.FromRgb(31, 42, 60));
+        activeButton.Foreground = Brushes.White;
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateResponsiveLayout();
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        var compact = ActualWidth < 1380;
+        DashboardView.SetCompactMode(compact);
+        PositionsView.SetCompactMode(compact);
+        ImportStudioView.SetCompactMode(compact);
     }
 
     private void ImportStudioView_AddExportRequested(object? sender, EventArgs e)

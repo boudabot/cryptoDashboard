@@ -71,6 +71,14 @@ Passe UX v2:
   - cout suivi par devise
   - volume par actif
   - PnL realise par actif
+- La navigation a ete separee en sections visibles une par une:
+  - `Tableau de bord`
+  - groupe `Actifs` avec `Apercu ledger`, `Spot / Positions`, `Earn / Rewards`, `Alpha`
+  - groupe `Ordres` avec `Import Studio`, `Journal ledger`
+  - `Donnees`
+- Le menu suit une logique type Binance: groupes repliables, sous-entrees explicites, contexte unique a l'ecran.
+- Les graphiques ledger simples sont replies par defaut pour ne pas alourdir l'experience principale.
+- Les cartes positions et metriques ont une premiere passe responsive: moins de colonnes fixes, textes non tronques.
 
 Pas de changement volontaire sur:
 

@@ -4,6 +4,8 @@ namespace LocalCrypto.App.Views;
 
 public partial class DashboardView : UserControl
 {
+    private bool _compactMode;
+
     public DashboardView()
     {
         InitializeComponent();
@@ -22,5 +24,16 @@ public partial class DashboardView : UserControl
         ConfidenceCard.Value = metrics.Confidence;
         ConfidenceCard.Hint = metrics.ConfidenceHint;
         ConfidenceCard.ValueBrush = metrics.ConfidenceTone;
+    }
+
+    public void SetCompactMode(bool compact)
+    {
+        if (_compactMode == compact)
+        {
+            return;
+        }
+
+        _compactMode = compact;
+        DashboardMetricsGrid.Columns = compact ? 3 : 6;
     }
 }

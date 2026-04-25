@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:LocalCrypto.App.Views"
         Title="localCrypto" Height="840" Width="1260" MinHeight="720" MinWidth="1080"
-        Background="#090E18" WindowStartupLocation="CenterScreen">
+        Background="#090E18" WindowStartupLocation="CenterScreen"
+        SizeChanged="Window_SizeChanged">
     <Window.Resources>
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -16,12 +17,23 @@
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="Padding" Value="12,10" />
-            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="#A8B3C7" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style x:Key="NavGroupButton" BasedOn="{StaticResource NavButton}" TargetType="Button">
+            <Setter Property="Foreground" Value="#E5E7EB" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,14,0,8" />
+        </Style>
+        <Style x:Key="NavSubButton" BasedOn="{StaticResource NavButton}" TargetType="Button">
+            <Setter Property="Padding" Value="26,9,12,9" />
+            <Setter Property="Foreground" Value="#98A4B8" />
+            <Setter Property="FontSize" Value="14" />
         </Style>
     </Window.Resources>
 
@@ -31,7 +43,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#111A29" Padding="20">
+        <Border Grid.Column="0" Background="#111A29" Padding="18">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top">
                     <TextBlock Text="localCrypto" Foreground="White" FontSize="26" FontWeight="SemiBold" />
@@ -40,10 +52,41 @@
                     <TextBlock Text="V0.1.2 WPF" Foreground="#F0B90B" FontWeight="SemiBold" />
                     <TextBlock Text="SQLite local-first" Foreground="#8FA1BD" Margin="0,4,0,28" />
 
-                    <Button Content="Tableau de bord" Tag="Dashboard" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Background="#1C273A" Foreground="White" />
-                    <Button Content="Positions" Tag="Positions" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
-                    <Button Content="Import Studio" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
-                    <Button Content="Donnees" Tag="Data" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
+                    <Button x:Name="DashboardNavButton" Content="Tableau de bord" Tag="Dashboard" Click="NavigateSection_Click" Style="{StaticResource NavButton}" />
+
+                    <Button x:Name="AssetsGroupButton" Click="ToggleNavGroup_Click" Tag="Assets" Style="{StaticResource NavGroupButton}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Actifs" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="AssetsChevronText" Grid.Column="1" Text="-" Foreground="#A8B3C7" />
+                        </Grid>
+                    </Button>
+                    <StackPanel x:Name="AssetsMenu">
+                        <Button x:Name="AssetsOverviewNavButton" Content="Apercu ledger" Tag="Dashboard" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="SpotNavButton" Content="Spot / Positions" Tag="Positions" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="EarnNavButton" Content="Earn / Rewards" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="AlphaNavButton" Content="Alpha" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                    </StackPanel>
+
+                    <Button x:Name="OrdersGroupButton" Click="ToggleNavGroup_Click" Tag="Orders" Style="{StaticResource NavGroupButton}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Ordres" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="OrdersChevronText" Grid.Column="1" Text="+" Foreground="#A8B3C7" />
+                        </Grid>
+                    </Button>
+                    <StackPanel x:Name="OrdersMenu" Visibility="Collapsed">
+                        <Button x:Name="ImportNavButton" Content="Import Studio" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="LedgerNavButton" Content="Journal ledger" Tag="Data" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                    </StackPanel>
+
+                    <Button x:Name="DataNavButton" Content="Donnees" Tag="Data" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Margin="0,16,0,6" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Bottom">
@@ -58,20 +101,22 @@
         </Border>
 
         <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto" Background="#090E18">
-            <StackPanel Margin="24">
+            <Grid Margin="24">
                 <views:DashboardView x:Name="DashboardView" />
-                <views:PositionsView x:Name="PositionsView" AssetProofRequested="PositionsView_AssetProofRequested" />
+                <views:PositionsView x:Name="PositionsView" Visibility="Collapsed" AssetProofRequested="PositionsView_AssetProofRequested" />
                 <views:ImportStudioView x:Name="ImportStudioView"
+                                        Visibility="Collapsed"
                                         AddExportRequested="ImportStudioView_AddExportRequested"
                                         ValidateTradesRequested="ImportStudioView_ValidateTradesRequested"
                                         ResetRequested="ImportStudioView_ResetRequested"
                                         FiltersChanged="ImportStudioView_FiltersChanged" />
                 <views:DataView x:Name="DataView"
+                                Visibility="Collapsed"
                                 BackupRequested="DataView_BackupRequested"
                                 RestoreRequested="DataView_RestoreRequested"
                                 ClearLedgerRequested="DataView_ClearLedgerRequested"
                                 DeleteTransactionRequested="DataView_DeleteTransactionRequested" />
-            </StackPanel>
+            </Grid>
         </ScrollViewer>
     </Grid>
 </Window>

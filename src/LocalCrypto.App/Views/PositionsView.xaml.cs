@@ -6,6 +6,7 @@ namespace LocalCrypto.App.Views;
 public partial class PositionsView : UserControl
 {
     public event EventHandler<string>? AssetProofRequested;
+    private bool _compactMode;
 
     public PositionsView()
     {
@@ -61,6 +62,25 @@ public partial class PositionsView : UserControl
         CostChartItems.ItemTemplate = ChartTemplate();
         VolumeChartItems.ItemTemplate = ChartTemplate();
         PnlChartItems.ItemTemplate = ChartTemplate();
+    }
+
+    public void SetCompactMode(bool compact)
+    {
+        if (_compactMode == compact)
+        {
+            return;
+        }
+
+        _compactMode = compact;
+        PositionsListColumn.Width = new GridLength(1, GridUnitType.Star);
+        PositionsGapColumn.Width = compact ? new GridLength(0) : new GridLength(18);
+        PositionsXrayColumn.Width = compact ? new GridLength(0) : new GridLength(0.95, GridUnitType.Star);
+
+        Grid.SetRow(AssetXrayPanel, compact ? 1 : 0);
+        Grid.SetColumn(AssetXrayPanel, compact ? 0 : 2);
+        Grid.SetColumnSpan(AssetXrayPanel, compact ? 3 : 1);
+        AssetXrayPanel.Margin = compact ? new Thickness(0, 14, 0, 0) : new Thickness(0);
+        PositionListHost.MaxHeight = compact ? double.PositiveInfinity : 430;
     }
 
     private void AssetPositionCard_ProofRequested(object? sender, string symbol)

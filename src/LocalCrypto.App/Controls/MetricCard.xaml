@@ -5,7 +5,11 @@
     <Border Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,10,0">
         <StackPanel>
             <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="#8FA1BD" FontSize="12" />
-            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{Binding ValueBrush, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       Foreground="{Binding ValueBrush, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       FontSize="21"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
             <TextBlock Text="{Binding Hint, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="#64748B" FontSize="11" TextWrapping="Wrap" />
         </StackPanel>
     </Border>
