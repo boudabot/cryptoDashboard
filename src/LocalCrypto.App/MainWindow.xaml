@@ -59,6 +59,10 @@
                     <TextBlock Text="Windows ledger-first" Foreground="#B8C2CC" Margin="0,4,0,28" />
                     <TextBlock Text="V0.1.2 WPF" Foreground="#D7B46A" FontWeight="SemiBold" />
                     <TextBlock Text="Sans web, sans localhost" Foreground="#B8C2CC" Margin="0,4,0,28" />
+                    <Button Content="Tableau de bord" Tag="Dashboard" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
+                    <Button Content="Actifs" Tag="Positions" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
+                    <Button Content="Imports" Tag="Imports" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
+                    <Button Content="Donnees" Tag="Data" Click="NavigateSection_Click" Background="#2F3A49" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Bottom">
@@ -68,12 +72,19 @@
             </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="26">
-                <TextBlock Text="Portefeuille" FontSize="30" FontWeight="SemiBold" Foreground="#17212B" />
+                <TextBlock x:Name="DashboardAnchor" Text="Portefeuille" FontSize="30" FontWeight="SemiBold" Foreground="#17212B" />
                 <TextBlock Text="Les positions sont reconstruites depuis les transactions SQLite locales." Foreground="#52606D" Margin="0,4,0,20" />
 
-                <UniformGrid Columns="4" Margin="0,0,0,14">
+                <UniformGrid Columns="5" Margin="0,0,0,14">
+                    <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="Portefeuille suivi" Foreground="#52606D" />
+                            <TextBlock x:Name="TrackedBalanceText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="hors prix live" Foreground="#7B8794" FontSize="11" />
+                        </StackPanel>
+                    </Border>
                     <Border Style="{StaticResource Panel}" Margin="0,0,10,0">
                         <StackPanel>
                             <TextBlock Text="Investi" Foreground="#52606D" />
@@ -94,16 +105,17 @@
                     </Border>
                     <Border Style="{StaticResource Panel}">
                         <StackPanel>
-                            <TextBlock Text="Transactions" Foreground="#52606D" />
-                            <TextBlock x:Name="TransactionCountText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="Confiance" Foreground="#52606D" />
+                            <TextBlock x:Name="DataConfidenceText" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock x:Name="DataConfidenceHintText" Foreground="#7B8794" FontSize="11" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </UniformGrid>
 
-                <Border Style="{StaticResource Panel}">
+                <Border x:Name="PositionsAnchor" Style="{StaticResource Panel}">
                     <StackPanel>
                         <TextBlock Text="Positions" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-                        <DataGrid x:Name="PositionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="130">
+                        <DataGrid x:Name="PositionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="130" SelectionChanged="PositionsGrid_SelectionChanged">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Actif" Binding="{Binding Symbol}" Width="*" />
                                 <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
@@ -116,7 +128,39 @@
                     </StackPanel>
                 </Border>
 
-                <Border Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="22" Margin="0,0,0,14">
+                <Border x:Name="AssetXrayPanel" Style="{StaticResource Panel}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock x:Name="AssetXrayTitleText" Text="Asset X-Ray" FontSize="20" FontWeight="SemiBold" />
+                                <TextBlock x:Name="AssetXraySubtitleText" Text="Selectionne un actif pour voir les transactions qui expliquent la position." Foreground="#52606D" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" x:Name="AssetXrayConfidenceText" Foreground="#B45309" FontWeight="SemiBold" />
+                        </Grid>
+                        <UniformGrid Columns="4" Margin="0,0,0,12">
+                            <TextBlock x:Name="AssetXrayQuantityText" />
+                            <TextBlock x:Name="AssetXrayAverageText" />
+                            <TextBlock x:Name="AssetXrayCostText" />
+                            <TextBlock x:Name="AssetXrayPnlText" />
+                        </UniformGrid>
+                        <DataGrid x:Name="AssetTransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="120">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="150" />
+                                <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="70" />
+                                <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
+                                <DataGridTextColumn Header="Prix" Binding="{Binding UnitPrice}" Width="*" />
+                                <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="*" />
+                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="ImportsAnchor" Background="#0B101B" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="22" Margin="0,0,0,14">
                     <StackPanel>
                         <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
@@ -129,6 +173,7 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="Ajouter export" Click="LoadBinanceImport_Click" Background="#F0B90B" Foreground="#111827" FontWeight="SemiBold" />
+                                <Button Content="Valider trades" Click="WriteImportableTrades_Click" Background="#22C55E" Foreground="#07111F" FontWeight="SemiBold" />
                                 <Button Content="Reinitialiser" Click="ClearBinanceImports_Click" Background="#1F2937" Foreground="White" />
                             </StackPanel>
                         </Grid>
@@ -308,7 +353,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Panel}">
+                <Border x:Name="DataAnchor" Style="{StaticResource Panel}">
                     <StackPanel>
                         <TextBlock Text="Donnees" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
                         <TextBlock Text="Source de verite SQLite active" Foreground="#52606D" />
