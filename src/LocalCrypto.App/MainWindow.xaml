@@ -71,6 +71,8 @@
                         <Button x:Name="AlphaNavButton" Content="Alpha" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                     </StackPanel>
 
+                    <Button x:Name="BinanceApiNavButton" Content="Binance API" Tag="BinanceApi" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Margin="0,16,0,6" />
+
                     <Button x:Name="OrdersGroupButton" Click="ToggleNavGroup_Click" Tag="Orders" Style="{StaticResource NavGroupButton}">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -104,6 +106,12 @@
             <Grid Margin="24">
                 <views:DashboardView x:Name="DashboardView" />
                 <views:PositionsView x:Name="PositionsView" Visibility="Collapsed" AssetProofRequested="PositionsView_AssetProofRequested" />
+                <views:BinanceApiView x:Name="BinanceApiView"
+                                      Visibility="Collapsed"
+                                      SaveCredentialsRequested="BinanceApiView_SaveCredentialsRequested"
+                                      TestConnectionRequested="BinanceApiView_TestConnectionRequested"
+                                      ClearCredentialsRequested="BinanceApiView_ClearCredentialsRequested"
+                                      RefreshSpotRequested="BinanceApiView_RefreshSpotRequested" />
                 <views:ImportStudioView x:Name="ImportStudioView"
                                         Visibility="Collapsed"
                                         AddExportRequested="ImportStudioView_AddExportRequested"

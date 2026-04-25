@@ -115,3 +115,12 @@ public sealed record LedgerChartRow(
     string Value,
     double Width,
     string Color);
+
+public sealed record BinanceLiveBalanceRow(
+    string Asset,
+    string Free,
+    string Locked,
+    string Total,
+    string PriceUsdt,
+    string ValueUsdt,
+    string Status);

@@ -115,6 +115,7 @@ Ce qui existe deja:
 - chips actifs import cliquables
 - quarantaine import en memoire pour doublons probables
 - graphiques ledger simples sans prix live, replies par defaut
+- branche `codex/binance-api-readonly`: integration initiale Binance API read-only pour soldes Spot et prix publics, sans ecriture ledger automatique
 
 Ce qui reste incomplet ou a corriger:
 
@@ -123,6 +124,7 @@ Ce qui reste incomplet ou a corriger:
 - les devises mixtes sont maintenant signalees comme non consolidees, mais pas encore converties
 - pas encore de switch global EUR / USDT
 - pas encore de prix live/cache marche
+- Binance API ne couvre pas encore Earn/Alpha/Auto-Invest de facon complete
 - pas encore de PnL latent fiable
 - `CONVERT`, `REWARD`, `INTERNAL`, `CASH` ne sont pas ecrits automatiquement dans le ledger
 - pas encore de vraie quarantaine persistante des imports
@@ -215,6 +217,7 @@ Puis lire dans cet ordre:
 ```text
 docs\HANDOFF_NEXT_CHAT.md
 docs\IMPORT_RECONCILIATION.md
+docs\BINANCE_API.md
 docs\PORTFOLIO_TRUTH_UPGRADE.md
 docs\BUILD.md
 docs\DATA.md

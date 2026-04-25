@@ -14,6 +14,8 @@ public partial class MainWindow : Window
     private readonly BinanceImportPreviewer _binanceImportPreviewer = new();
     private readonly BinanceLedgerMapper _binanceLedgerMapper = new();
     private readonly BinanceImportReconciler _binanceImportReconciler = new();
+    private readonly BinanceApiClient _binanceApiClient = new();
+    private readonly BinanceCredentialStore _binanceCredentialStore = new();
     private readonly List<BinanceImportEvent> _binanceImportEvents = [];
     private readonly List<BinanceImportDuplicate> _binanceImportDuplicates = [];
     private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
@@ -25,6 +27,7 @@ public partial class MainWindow : Window
         _store = SqliteLedgerStore.OpenDefault();
         DatabasePathText.Text = _store.DatabasePath;
         DataView.SetDatabasePath(_store.DatabasePath);
+        InitializeBinanceApiView();
         RefreshImportDashboard();
         RefreshPortfolio();
         ShowPage("Dashboard", DashboardNavButton);
@@ -69,6 +72,7 @@ public partial class MainWindow : Window
     {
         DashboardView.Visibility = target == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
         PositionsView.Visibility = target == "Positions" ? Visibility.Visible : Visibility.Collapsed;
+        BinanceApiView.Visibility = target == "BinanceApi" ? Visibility.Visible : Visibility.Collapsed;
         ImportStudioView.Visibility = target == "Imports" ? Visibility.Visible : Visibility.Collapsed;
         DataView.Visibility = target == "Data" ? Visibility.Visible : Visibility.Collapsed;
 
@@ -80,6 +84,7 @@ public partial class MainWindow : Window
     {
         "Dashboard" => DashboardNavButton,
         "Positions" => SpotNavButton,
+        "BinanceApi" => BinanceApiNavButton,
         "Imports" => ImportNavButton,
         "Data" => DataNavButton,
         _ => DashboardNavButton
@@ -94,6 +99,7 @@ public partial class MainWindow : Window
             SpotNavButton,
             EarnNavButton,
             AlphaNavButton,
+            BinanceApiNavButton,
             ImportNavButton,
             LedgerNavButton,
             DataNavButton
@@ -119,7 +125,106 @@ public partial class MainWindow : Window
         var compact = ActualWidth < 1380;
         DashboardView.SetCompactMode(compact);
         PositionsView.SetCompactMode(compact);
+        BinanceApiView.SetCompactMode(compact);
         ImportStudioView.SetCompactMode(compact);
+    }
+
+    private void InitializeBinanceApiView()
+    {
+        try
+        {
+            var credentials = _binanceCredentialStore.Load();
+            BinanceApiView.SetInitialState(
+                credentials is not null,
+                credentials is null
+                    ? "Aucune cle API locale. Cree une cle Binance lecture seule, colle-la ici, puis teste la connexion."
+                    : $"Cle API locale detectee. Stockage: {_binanceCredentialStore.FilePath}");
+        }
+        catch (Exception exception)
+        {
+            BinanceApiView.SetInitialState(false, $"Impossible de lire les identifiants Binance locaux: {exception.Message}");
+        }
+    }
+
+    private void BinanceApiView_SaveCredentialsRequested(object? sender, BinanceApiCredentials credentials)
+    {
+        try
+        {
+            _binanceCredentialStore.Save(credentials);
+            BinanceApiView.LoadApiKeyHint(credentials.ApiKey);
+            BinanceApiView.SetInitialState(true, $"Cle API enregistree localement. Stockage chiffre: {_binanceCredentialStore.FilePath}");
+        }
+        catch (Exception exception)
+        {
+            BinanceApiView.SetError(exception.Message);
+        }
+    }
+
+    private async void BinanceApiView_TestConnectionRequested(object? sender, EventArgs e)
+    {
+        await RefreshBinanceSpotAsync("Test connexion Binance...");
+    }
+
+    private async void BinanceApiView_RefreshSpotRequested(object? sender, EventArgs e)
+    {
+        await RefreshBinanceSpotAsync("Synchronisation des soldes Spot Binance...");
+    }
+
+    private void BinanceApiView_ClearCredentialsRequested(object? sender, EventArgs e)
+    {
+        _binanceCredentialStore.Clear();
+        BinanceApiView.LoadApiKeyHint(null);
+        BinanceApiView.SetInitialState(false, "Cle Binance locale effacee.");
+    }
+
+    private async Task RefreshBinanceSpotAsync(string runningMessage)
+    {
+        try
+        {
+            var credentials = _binanceCredentialStore.Load();
+            if (credentials is null)
+            {
+                BinanceApiView.SetError("Aucune cle API locale. Enregistre une cle Binance read-only avant la synchro.");
+                return;
+            }
+
+            BinanceApiView.SetSyncRunning(runningMessage);
+            var snapshot = await _binanceApiClient.GetAccountSnapshotAsync(credentials);
+            var prices = await LoadBinancePricesAsync(snapshot.Balances);
+            var rows = BinanceApiUiBuilder.BuildRows(snapshot, prices);
+            var total = BinanceApiUiBuilder.TotalUsdt(snapshot, prices);
+            var pricedRows = rows.Count(row => row.PriceUsdt != "-");
+            BinanceApiView.SetSyncResult(
+                rows,
+                $"{UiFormatting.FormatNumber(total)} USDT",
+                snapshot.SyncedAt,
+                $"Spot lu depuis Binance: {rows.Count} actif(s), {pricedRows} prix public(s) disponibles. Aucune ecriture SQLite.");
+        }
+        catch (Exception exception)
+        {
+            BinanceApiView.SetError(exception.Message);
+        }
+    }
+
+    private async Task<IReadOnlyDictionary<string, decimal>> LoadBinancePricesAsync(IReadOnlyList<BinanceAccountBalance> balances)
+    {
+        var prices = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var balance in balances)
+        {
+            var symbol = BinanceApiUiBuilder.PriceSymbolFor(balance.Asset);
+            if (symbol is null)
+            {
+                continue;
+            }
+
+            var ticker = await _binanceApiClient.TryGetPriceAsync(symbol);
+            if (ticker is not null)
+            {
+                prices[balance.Asset] = ticker.Price;
+            }
+        }
+
+        return prices;
     }
 
     private void ImportStudioView_AddExportRequested(object? sender, EventArgs e)
