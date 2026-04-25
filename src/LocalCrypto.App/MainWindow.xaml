@@ -364,6 +364,7 @@
                         <StackPanel Orientation="Horizontal">
                             <Button Content="Sauvegarder SQLite" Click="BackupDatabase_Click" Background="#047857" Foreground="White" />
                             <Button Content="Restaurer SQLite" Click="RestoreDatabase_Click" Background="#B45309" Foreground="White" />
+                            <Button Content="Vider ledger" Click="ClearLedger_Click" Background="#991B1B" Foreground="White" />
                         </StackPanel>
                         <TextBlock x:Name="DataFeedbackText" Foreground="#52606D" Margin="0,8,0,0" TextWrapping="Wrap" />
                     </StackPanel>

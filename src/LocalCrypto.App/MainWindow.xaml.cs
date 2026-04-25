@@ -462,6 +462,33 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ClearLedger_Click(object sender, RoutedEventArgs e)
+    {
+        var confirmation = MessageBox.Show(
+            this,
+            "Vider toutes les transactions du ledger SQLite ? Fais une sauvegarde avant si tu veux revenir en arriere.",
+            "Confirmer le reset ledger",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var deleted = _store.ClearTransactions();
+        DataFeedbackText.Text = $"{deleted} transaction(s) supprimee(s). Le portefeuille est pret pour un import propre.";
+        AssetTransactionsGrid.ItemsSource = null;
+        AssetXrayTitleText.Text = "Asset X-Ray";
+        AssetXraySubtitleText.Text = "Selectionne un actif pour voir les transactions qui expliquent la position.";
+        AssetXrayConfidenceText.Text = string.Empty;
+        AssetXrayQuantityText.Text = string.Empty;
+        AssetXrayAverageText.Text = string.Empty;
+        AssetXrayCostText.Text = string.Empty;
+        AssetXrayPnlText.Text = string.Empty;
+        RefreshPortfolio();
+    }
+
     private void RefreshPortfolio()
     {
         var transactions = _store.ListTransactions();

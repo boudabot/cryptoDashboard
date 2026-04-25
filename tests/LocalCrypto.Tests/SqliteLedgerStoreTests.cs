@@ -41,6 +41,19 @@ public sealed class SqliteLedgerStoreTests : IDisposable
     }
 
     [Fact]
+    public void ClearTransactionsRemovesLedgerRows()
+    {
+        var store = CreateStore("ledger.sqlite");
+        store.AddTransaction(Transaction("1", TradeSide.Buy, "BTC"));
+        store.AddTransaction(Transaction("2", TradeSide.Buy, "ETH"));
+
+        var deleted = store.ClearTransactions();
+
+        Assert.Equal(2, deleted);
+        Assert.Empty(store.ListTransactions());
+    }
+
+    [Fact]
     public void BackupAndRestoreKeepLedgerTransactions()
     {
         var source = CreateStore("source.sqlite");

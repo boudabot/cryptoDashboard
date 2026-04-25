@@ -165,6 +165,15 @@ public sealed class SqliteLedgerStore
         return command.ExecuteNonQuery() == 1;
     }
 
+    public int ClearTransactions()
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM transactions;";
+
+        return command.ExecuteNonQuery();
+    }
+
     public void BackupDatabase(string backupPath)
     {
         EnsureCreated();
