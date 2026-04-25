@@ -4,6 +4,27 @@ Date: 2026-04-25
 
 But: permettre a une nouvelle conversation de reprendre le projet sans perdre le contexte produit, Git, donnees et UX.
 
+## Regle de maintenance
+
+Ce document est le point de reprise court du projet. Il doit etre mis a jour apres chaque etape structurante:
+
+- merge d'une branche feature dans `dev`
+- creation ou suppression d'une branche importante
+- changement du workflow build/release
+- changement du schema SQLite ou de la source de verite
+- nouvelle limite connue sur les imports, le calcul portefeuille ou l'UX
+- decision produit qui remplace une ancienne direction
+
+Il ne doit pas devenir un journal complet. Garder une version courte, actionnable et compressee:
+
+- etat reel du repo
+- decisions encore valides
+- risques connus
+- prochaine branche recommandee
+- commandes exactes pour reprendre
+
+Si le contenu devient trop long, archiver le detail dans un document dedie et garder ici seulement le resume et le lien.
+
 ## Etat Git actuel
 
 Repo principal:
@@ -21,6 +42,7 @@ codex/import-reconciliation
 Derniers commits connus:
 
 ```text
+6dc3195 Add next chat handoff
 f2d268c Add ledger reset action
 16d60b3 Reconcile Binance import duplicates
 1faa400 Merge portfolio truth upgrade
