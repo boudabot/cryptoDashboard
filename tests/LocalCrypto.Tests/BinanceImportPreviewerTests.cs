@@ -96,6 +96,84 @@ public sealed class BinanceImportPreviewerTests : IDisposable
     }
 
     [Fact]
+    public void PreviewCsvReadsSpotTradeHistory()
+    {
+        var path = Path.Combine(_directory, "spot-trades.csv");
+        File.WriteAllText(path, """
+            Duree,Paire,Cote,Prix,Execute,Montant,Frais
+            26-04-20 11:37:45,ETHEUR,SELL,1965,0.0514ETH,101.001EUR,0.101001EUR
+            """, Encoding.UTF8);
+
+        var preview = new BinanceImportPreviewer().Preview(path);
+
+        var trade = Assert.Single(preview.Events);
+        Assert.Equal("SELL", trade.Kind);
+        Assert.Equal("ETH", trade.Asset);
+        Assert.Equal(0.0514m, trade.Quantity);
+        Assert.Equal("EUR", trade.QuoteCurrency);
+        Assert.Equal(101.001m, trade.QuoteAmount);
+        Assert.Equal(1965m, trade.UnitPrice);
+        Assert.Equal(0.101001m, trade.FeeAmount);
+        Assert.Equal("EUR", trade.FeeCurrency);
+    }
+
+    [Fact]
+    public void PreviewXlsxReadsSpotTradeHistory()
+    {
+        var path = Path.Combine(_directory, "spot-trades.xlsx");
+        CreateSimpleXlsx(
+            path,
+            "Historique des trades Spot",
+            ["Duree", "Paire", "Cote", "Prix", "Execute", "Montant", "Frais"],
+            [["26-04-20 11:37:45", "ETHEUR", "SELL", "1965", "0.0514ETH", "101.001EUR", "0.101001EUR"]]);
+
+        var preview = new BinanceImportPreviewer().Preview(path);
+
+        var trade = Assert.Single(preview.Events);
+        Assert.Equal("SELL", trade.Kind);
+        Assert.Equal("ETH", trade.Asset);
+        Assert.Equal(101.001m, trade.QuoteAmount);
+        Assert.Equal(0.101001m, trade.FeeAmount);
+    }
+
+    [Fact]
+    public void PreviewCsvReadsAutoInvestBuy()
+    {
+        var path = Path.Combine(_directory, "auto-invest.csv");
+        File.WriteAllText(path, """
+            Duree,Crypto detenue,Montant par periode,Frais de trading,Unites,De,Statut
+            26-04-24 12:00:00,ETH,50 USDC,0.05 USDC,0.021 ETH,USDC,Completed
+            """, Encoding.UTF8);
+
+        var preview = new BinanceImportPreviewer().Preview(path);
+
+        var trade = Assert.Single(preview.Events);
+        Assert.Equal("BUY", trade.Kind);
+        Assert.Equal("ETH", trade.Asset);
+        Assert.Equal(0.021m, trade.Quantity);
+        Assert.Equal("USDC", trade.QuoteCurrency);
+        Assert.Equal(50m, trade.QuoteAmount);
+        Assert.Equal(50m / 0.021m, trade.UnitPrice);
+        Assert.Equal(0.05m, trade.FeeAmount);
+    }
+
+    [Fact]
+    public void PreviewCsvReadsEmptyAutoInvestHistory()
+    {
+        var path = Path.Combine(_directory, "auto-invest-empty.csv");
+        File.WriteAllText(path, """
+            Duree,Crypto detenue,Montant par periode,Frais de trading,Unites,De,Statut
+            Aucune donnee ne correspond aux criteres.
+            """, Encoding.UTF8);
+
+        var preview = new BinanceImportPreviewer().Preview(path);
+
+        Assert.Empty(preview.Events);
+        Assert.Equal(1, preview.IgnoredRows);
+        Assert.Equal(0, preview.ImportableRows);
+    }
+
+    [Fact]
     public void PreviewRejectsUnsupportedFiles()
     {
         var path = Path.Combine(_directory, "binance.txt");
@@ -206,5 +284,42 @@ public sealed class BinanceImportPreviewerTests : IDisposable
               </sheetData>
             </worksheet>
             """);
+    }
+
+    private static void CreateSimpleXlsx(string path, string title, IReadOnlyList<string> headers, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        using var archive = ZipFile.Open(path, ZipArchiveMode.Create);
+        var sheet = archive.CreateEntry("xl/worksheets/sheet1.xml");
+        using var writer = new StreamWriter(sheet.Open(), Encoding.UTF8);
+        writer.WriteLine("""<?xml version="1.0" encoding="UTF-8"?>""");
+        writer.WriteLine("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
+        writer.WriteLine("<sheetData>");
+        writer.WriteLine($"""<row r="1">{InlineCell("C", 1, title)}</row>""");
+        writer.WriteLine($"""<row r="5">{string.Concat(headers.Select((header, index) => InlineCell(ColumnName(index + 3), 5, header)))}</row>""");
+
+        for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            var excelRow = rowIndex + 6;
+            writer.WriteLine($"""<row r="{excelRow}">{string.Concat(rows[rowIndex].Select((value, index) => InlineCell(ColumnName(index + 3), excelRow, value)))}</row>""");
+        }
+
+        writer.WriteLine("</sheetData>");
+        writer.WriteLine("</worksheet>");
+    }
+
+    private static string InlineCell(string column, int row, string value) =>
+        $"""<c r="{column}{row}" t="inlineStr"><is><t>{System.Security.SecurityElement.Escape(value)}</t></is></c>""";
+
+    private static string ColumnName(int index)
+    {
+        var name = string.Empty;
+        while (index > 0)
+        {
+            index--;
+            name = (char)('A' + (index % 26)) + name;
+            index /= 26;
+        }
+
+        return name;
     }
 }

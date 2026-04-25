@@ -416,7 +416,8 @@ public sealed class BinanceImportPreviewer
         }
 
         var headers = NormalizeHeaders(ParseCsvLine(lines[0]));
-        if (!IsAlphaOrderHeader(headers) && !IsSpotOrderHeader(headers))
+        var exportKind = DetectStructuredExport(headers);
+        if (exportKind == BinanceStructuredExportKind.Unknown)
         {
             return false;
         }
@@ -430,7 +431,14 @@ public sealed class BinanceImportPreviewer
             }
         }
 
-        preview = BuildOrderPreview(filePath, rows, isAlphaOrder: IsAlphaOrderHeader(headers));
+        preview = exportKind switch
+        {
+            BinanceStructuredExportKind.AlphaOrder => BuildOrderPreview(filePath, rows, isAlphaOrder: true),
+            BinanceStructuredExportKind.SpotOrder => BuildOrderPreview(filePath, rows, isAlphaOrder: false),
+            BinanceStructuredExportKind.SpotTrade => BuildSpotTradePreview(filePath, rows),
+            BinanceStructuredExportKind.AutoInvest => BuildAutoInvestPreview(filePath, rows),
+            _ => throw new InvalidOperationException("Format Binance structure non supporte.")
+        };
         return true;
     }
 
@@ -457,7 +465,7 @@ public sealed class BinanceImportPreviewer
         var headerIndex = rawRows.FindIndex(row =>
         {
             var headers = NormalizeHeader(row.Values);
-            return IsSpotOrderHeader(headers) || IsAlphaOrderHeader(headers);
+            return DetectStructuredExport(headers) != BinanceStructuredExportKind.Unknown;
         });
 
         if (headerIndex < 0)
@@ -467,6 +475,7 @@ public sealed class BinanceImportPreviewer
 
         var headerCells = rawRows[headerIndex].OrderBy(cell => cell.Key).ToList();
         var headers = NormalizeHeaders(headerCells.Select(cell => cell.Value).ToList());
+        var exportKind = DetectStructuredExport(headers);
         var columns = headerCells.Select(cell => cell.Key).ToList();
         var rows = new List<Dictionary<string, string>>();
 
@@ -481,7 +490,14 @@ public sealed class BinanceImportPreviewer
             rows.Add(ToRow(headers, values));
         }
 
-        preview = BuildOrderPreview(filePath, rows, isAlphaOrder: IsAlphaOrderHeader(headers));
+        preview = exportKind switch
+        {
+            BinanceStructuredExportKind.AlphaOrder => BuildOrderPreview(filePath, rows, isAlphaOrder: true),
+            BinanceStructuredExportKind.SpotOrder => BuildOrderPreview(filePath, rows, isAlphaOrder: false),
+            BinanceStructuredExportKind.SpotTrade => BuildSpotTradePreview(filePath, rows),
+            BinanceStructuredExportKind.AutoInvest => BuildAutoInvestPreview(filePath, rows),
+            _ => throw new InvalidOperationException("Format Binance structure non supporte.")
+        };
         return true;
     }
 
@@ -537,12 +553,163 @@ public sealed class BinanceImportPreviewer
             [new BinanceOperationSummary(isAlphaOrder ? "Alpha orders filled" : "Spot orders filled", events.Count)]);
     }
 
+    private static BinanceImportPreview BuildSpotTradePreview(string filePath, IReadOnlyList<Dictionary<string, string>> rows)
+    {
+        var events = new List<BinanceImportEvent>();
+        foreach (var row in rows)
+        {
+            var side = Get(row, "Cote").ToUpperInvariant();
+            var executed = ParseAssetAmount(Get(row, "Execute"));
+            var total = ParseAssetAmount(Get(row, "Montant"));
+            var fee = ParseAssetAmount(Get(row, "Frais"));
+            var unitPrice = ParseAmount(Get(row, "Prix"));
+            var status = executed.Amount is > 0m && total.Amount is > 0m && unitPrice is > 0m
+                ? BinanceImportStatus.Importable
+                : BinanceImportStatus.Pending;
+
+            events.Add(new BinanceImportEvent(
+                events.Count + 1,
+                ParseDate(Get(row, "Duree")),
+                side == "SELL" ? "SELL" : "BUY",
+                executed.Asset,
+                executed.Amount,
+                total.Asset,
+                total.Amount,
+                unitPrice,
+                fee.Amount is > 0m ? fee.Amount : null,
+                fee.Amount is > 0m ? fee.Asset : "-",
+                1,
+                BinanceImportCategory.TradeLeg,
+                status,
+                status == BinanceImportStatus.Importable
+                    ? "Trade spot execute: prix, montant et frais Binance disponibles."
+                    : "Trade spot incomplet: a verifier avant import."));
+        }
+
+        return new BinanceImportPreview(
+            filePath,
+            rows.Count,
+            events.Count(importEvent => importEvent.Status == BinanceImportStatus.Importable),
+            events.Count(importEvent => importEvent.Status == BinanceImportStatus.Pending),
+            0,
+            0,
+            [],
+            events,
+            [new BinanceOperationSummary("Spot trades filled", events.Count)]);
+    }
+
+    private static BinanceImportPreview BuildAutoInvestPreview(string filePath, IReadOnlyList<Dictionary<string, string>> rows)
+    {
+        var events = new List<BinanceImportEvent>();
+        var ignoredRows = 0;
+
+        foreach (var row in rows)
+        {
+            if (IsNoDataRow(row))
+            {
+                ignoredRows++;
+                continue;
+            }
+
+            var asset = Get(row, "Crypto detenue").ToUpperInvariant();
+            var quantity = ParseAssetAmount(Get(row, "Unites"));
+            var quote = ParseAssetAmount(Get(row, "Montant par periode"));
+            var fee = ParseAssetAmount(Get(row, "Frais de trading"));
+            var fallbackQuoteCurrency = Get(row, "De").ToUpperInvariant();
+            var quoteCurrency = quote.Asset == "-" ? fallbackQuoteCurrency : quote.Asset;
+            var feeCurrency = fee.Asset == "-" ? quoteCurrency : fee.Asset;
+            var statusText = Get(row, "Statut");
+            var status = IsCompletedStatus(statusText) &&
+                !string.IsNullOrWhiteSpace(asset) &&
+                quantity.Amount is > 0m &&
+                quote.Amount is > 0m
+                    ? BinanceImportStatus.Importable
+                    : BinanceImportStatus.Pending;
+
+            events.Add(new BinanceImportEvent(
+                events.Count + 1,
+                ParseDate(Get(row, "Duree")),
+                "BUY",
+                string.IsNullOrWhiteSpace(asset) ? quantity.Asset : asset,
+                quantity.Amount,
+                string.IsNullOrWhiteSpace(quoteCurrency) ? "-" : quoteCurrency,
+                quote.Amount,
+                UnitPrice(quantity.Amount, quote.Amount),
+                fee.Amount is > 0m ? fee.Amount : null,
+                fee.Amount is > 0m ? feeCurrency : "-",
+                1,
+                BinanceImportCategory.TradeLeg,
+                status,
+                status == BinanceImportStatus.Importable
+                    ? "Auto-Invest execute: achat recurrent pret pour mapping ledger."
+                    : "Auto-Invest incomplet ou non execute: a verifier avant import."));
+        }
+
+        return new BinanceImportPreview(
+            filePath,
+            rows.Count,
+            events.Count(importEvent => importEvent.Status == BinanceImportStatus.Importable),
+            events.Count(importEvent => importEvent.Status == BinanceImportStatus.Pending),
+            ignoredRows,
+            0,
+            [],
+            events,
+            [new BinanceOperationSummary("Auto-Invest", events.Count)]);
+    }
+
+    private static bool IsNoDataRow(IReadOnlyDictionary<string, string> row) =>
+        row.Values.Any(value => value.Contains("Aucune", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsCompletedStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        var normalized = NormalizeHeader(status);
+        return normalized is "filled" or "success" or "successful" or "completed" or "termine" or "execute";
+    }
+
+    private static BinanceStructuredExportKind DetectStructuredExport(IReadOnlyList<string> headers)
+    {
+        if (IsAlphaOrderHeader(headers))
+        {
+            return BinanceStructuredExportKind.AlphaOrder;
+        }
+
+        if (IsSpotOrderHeader(headers))
+        {
+            return BinanceStructuredExportKind.SpotOrder;
+        }
+
+        if (IsSpotTradeHeader(headers))
+        {
+            return BinanceStructuredExportKind.SpotTrade;
+        }
+
+        if (IsAutoInvestHeader(headers))
+        {
+            return BinanceStructuredExportKind.AutoInvest;
+        }
+
+        return BinanceStructuredExportKind.Unknown;
+    }
+
     private static bool IsSpotOrderHeader(IReadOnlyList<string> headers) =>
         headers.Contains("Paire") && headers.Contains("Cote") && headers.Contains("Prix moyen") && headers.Contains("Trading total3");
+
+    private static bool IsSpotTradeHeader(IReadOnlyList<string> headers) =>
+        headers.Contains("Duree") && headers.Contains("Paire") && headers.Contains("Cote") &&
+        headers.Contains("Prix") && headers.Contains("Execute") && headers.Contains("Montant") && headers.Contains("Frais");
 
     private static bool IsAlphaOrderHeader(IReadOnlyList<string> headers) =>
         headers.Contains("Direction") && headers.Contains("Actif de base") && headers.Contains("Actif de cotation") &&
         headers.Contains("Prix moyen de trading") && headers.Contains("Execute") && headers.Contains("Total");
+
+    private static bool IsAutoInvestHeader(IReadOnlyList<string> headers) =>
+        headers.Contains("Crypto detenue") && headers.Contains("Montant par periode") &&
+        headers.Contains("Frais de trading") && headers.Contains("Unites") && headers.Contains("Statut");
 
     private static ParsedAssetAmount ParseAssetAmount(string value)
     {
@@ -751,6 +918,15 @@ public sealed record BinanceImportEvent(
 internal sealed record ParsedBinanceRow(BinanceImportRow Row, string RawRemark);
 
 internal sealed record ParsedAssetAmount(string Asset, decimal? Amount);
+
+internal enum BinanceStructuredExportKind
+{
+    Unknown,
+    AlphaOrder,
+    SpotOrder,
+    SpotTrade,
+    AutoInvest
+}
 
 public enum BinanceImportCategory
 {
