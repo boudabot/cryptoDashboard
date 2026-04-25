@@ -2,7 +2,7 @@
 
 ## Source de verite
 
-La source de verite V0.1.1 est le ledger SQLite:
+La source de verite V0.1.2 est le ledger SQLite:
 
 ```text
 %APPDATA%\localCrypto\localcrypto.sqlite
@@ -58,6 +58,20 @@ Alternative manuelle: fermer localCrypto, remplacer `%APPDATA%\localCrypto\local
 Les transactions ont une signature de doublon basee sur date, side, symbole, quantite, prix, frais et devise de frais. Un doublon probable est refuse avec un message lisible.
 
 La suppression se fait depuis le journal, ligne par ligne, avec confirmation. Les positions et PnL sont ensuite recalcules depuis les transactions restantes.
+
+## Import Binance
+
+La preview d'import Binance accepte les exports CSV et XLSX `Historique des transactions`.
+
+Etat actuel:
+
+- lecture locale du fichier uniquement
+- aucune ecriture SQLite
+- l'identifiant utilisateur n'est pas affiche dans la preview
+- les remarques Binance sont reduites a leur prefixe pour limiter l'exposition de references personnelles
+- les lignes trade sont marquees comme groupables, car Binance expose souvent achat, depense et frais sur plusieurs lignes
+
+Avant ecriture definitive dans `transactions`, une evolution devra grouper les lignes Binance en evenements portefeuille explicables.
 
 ## Legacy
 

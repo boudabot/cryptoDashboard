@@ -42,11 +42,12 @@ Source de verite unique:
 %APPDATA%\localCrypto\localcrypto.sqlite
 ```
 
-Depuis V0.1.1, l'application expose un bloc `Donnees` pour:
+Depuis V0.1.2, l'application expose:
 
 - sauvegarder la base SQLite active
 - restaurer une sauvegarde SQLite avec confirmation
 - rappeler que l'ancien cache Electron n'est pas la source portefeuille WPF
+- charger un export Binance CSV/XLSX en preview sans ecrire dans SQLite
 
 ## Branche
 
@@ -61,10 +62,10 @@ codex/...: evolutions
 Branche de travail actuelle:
 
 ```text
-codex/v011-data-safety
+codex/binance-import-preview
 ```
 
-## Portee V0.1.1
+## Portee V0.1.2
 
 - fenetre Windows native WPF
 - ajout manuel BUY/SELL
@@ -72,9 +73,11 @@ codex/v011-data-safety
 - sauvegarde/restauration SQLite depuis l'application
 - suppression transaction avec confirmation
 - refus lisible des doublons probables
+- preview d'import Binance CSV/XLSX
+- classification trades, rewards, mouvements internes, cash et rejets
 - calcul ledger-first: quantite, prix moyen, cout investi, frais, PnL realise
 - pas de web, pas d'Electron, pas de Vite, pas de localhost
 
 ## Prochain jalon
 
-Valider V0.1.1 en usage reel, puis ajouter une premiere preview d'import CSV sans ecrasement silencieux.
+Valider la preview Binance sur exports reels, puis grouper les lignes trade en transactions ledger avant ecriture SQLite.

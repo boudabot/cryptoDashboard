@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using LocalCrypto.Core;
@@ -11,6 +12,12 @@ public partial class MainWindow : Window
 {
     private static readonly CultureInfo FrenchCulture = CultureInfo.GetCultureInfo("fr-FR");
     private readonly SqliteLedgerStore _store;
+    private readonly BinanceImportPreviewer _binanceImportPreviewer = new();
+    private readonly List<BinanceImportEvent> _binanceImportEvents = [];
+    private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _loadedImportEventSignatures = new(StringComparer.OrdinalIgnoreCase);
+    private string _importViewFilter = "Tout";
+    private int _loadedImportSourceRows;
 
     public MainWindow()
     {
@@ -18,47 +25,284 @@ public partial class MainWindow : Window
         _store = SqliteLedgerStore.OpenDefault();
         DatabasePathText.Text = _store.DatabasePath;
         DataFileText.Text = _store.DatabasePath;
-        ResetForm();
         RefreshPortfolio();
     }
 
-    private void AddTransaction_Click(object sender, RoutedEventArgs e)
+    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshPortfolio();
+
+    private void LoadBinanceImport_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var transaction = new LedgerTransaction(
-                Guid.NewGuid().ToString("N"),
-                ParseExecutedAt(ExecutedAtBox.Text),
-                ParseSide(),
-                SymbolBox.Text.Trim().ToUpperInvariant(),
-                string.IsNullOrWhiteSpace(AssetNameBox.Text) ? SymbolBox.Text.Trim().ToUpperInvariant() : AssetNameBox.Text.Trim(),
-                ParseDecimal(QuantityBox.Text, "quantite"),
-                ParseDecimal(UnitPriceBox.Text, "prix unitaire"),
-                DefaultText(QuoteCurrencyBox.Text, "USDT").ToUpperInvariant(),
-                ParseDecimal(FeeAmountBox.Text, "frais"),
-                DefaultText(FeeCurrencyBox.Text, "USDT").ToUpperInvariant(),
-                DefaultText(SourceBox.Text, "MANUAL").ToUpperInvariant(),
-                NoteBox.Text.Trim());
-
-            ValidateTransaction(transaction);
-            if (_store.HasDuplicate(transaction))
+            var dialog = new OpenFileDialog
             {
-                throw new InvalidOperationException("Transaction refusee: doublon probable deja present dans le ledger.");
+                Title = "Charger un export Binance",
+                Filter = "Exports Binance (*.csv;*.xlsx)|*.csv;*.xlsx|CSV (*.csv)|*.csv|Excel (*.xlsx)|*.xlsx",
+                Multiselect = true
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
             }
 
-            _store.AddTransaction(transaction);
-            FeedbackText.Text = $"Transaction {transaction.Side} {transaction.Symbol} enregistree.";
-            DataFeedbackText.Text = "Ledger SQLite mis a jour.";
-            ResetForm();
-            RefreshPortfolio();
+            var addedFiles = 0;
+            var addedEvents = 0;
+            var duplicateEvents = 0;
+
+            foreach (var selectedFile in dialog.FileNames)
+            {
+                var fullPath = Path.GetFullPath(selectedFile);
+                if (!_loadedImportFiles.Add(fullPath))
+                {
+                    continue;
+                }
+
+                var preview = _binanceImportPreviewer.Preview(fullPath);
+                var newEvents = preview.Events
+                    .Where(importEvent => _loadedImportEventSignatures.Add(ImportEventSignature(importEvent)))
+                    .ToList();
+                _loadedImportSourceRows += preview.TotalRows;
+                _binanceImportEvents.AddRange(newEvents);
+                addedFiles++;
+                addedEvents += newEvents.Count;
+                duplicateEvents += preview.Events.Count - newEvents.Count;
+            }
+
+            RenumberImportEvents();
+            ImportFeedbackText.Text = addedFiles == 0
+                ? "Aucun nouveau fichier ajoute."
+                : $"{addedFiles} fichier(s) ajoute(s), {addedEvents} nouvel evenement(s), {duplicateEvents} doublon(s) ignores. Aucune ecriture SQLite.";
+            RefreshImportDashboard();
         }
         catch (Exception exception)
         {
-            FeedbackText.Text = exception.Message;
+            ImportFeedbackText.Text = exception.Message;
         }
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshPortfolio();
+    private void ClearBinanceImports_Click(object sender, RoutedEventArgs e)
+    {
+        _loadedImportFiles.Clear();
+        _loadedImportEventSignatures.Clear();
+        _binanceImportEvents.Clear();
+        _loadedImportSourceRows = 0;
+        ImportFeedbackText.Text = "Preview Binance reinitialisee.";
+        RefreshImportDashboard();
+    }
+
+    private void ImportViewFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string filter)
+        {
+            _importViewFilter = filter;
+            ApplyImportFilters();
+        }
+    }
+
+    private void ImportAsset_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string asset)
+        {
+            ImportAssetFilterBox.Text = asset;
+            _importViewFilter = "Trades";
+            ImportTabs.SelectedItem = ImportOrdersTab;
+            ApplyImportFilters();
+        }
+    }
+
+    private void ImportFilter_TextChanged(object sender, TextChangedEventArgs e) => ApplyImportFilters();
+
+    private void ApplyImportFilters()
+    {
+        if (ImportPreviewGrid is null)
+        {
+            return;
+        }
+
+        var rows = FilterImportEvents(_binanceImportEvents);
+
+        ImportPreviewGrid.ItemsSource = rows.Select(ToBinancePreviewRow).ToList();
+    }
+
+    private IReadOnlyList<BinanceImportEvent> FilterImportEvents(IReadOnlyList<BinanceImportEvent> source)
+    {
+        IEnumerable<BinanceImportEvent> rows = source;
+        var assetFilter = ImportAssetFilterBox?.Text.Trim().ToUpperInvariant() ?? string.Empty;
+
+        rows = _importViewFilter switch
+        {
+            "Trades" => rows.Where(row => row.Category == BinanceImportCategory.TradeLeg).ToList(),
+            "Earn / Rewards" => rows.Where(row => row.Category == BinanceImportCategory.Reward).ToList(),
+            "Internes" => rows.Where(row => row.Category == BinanceImportCategory.InternalMovement).ToList(),
+            "A confirmer" => rows.Where(row => row.Status == BinanceImportStatus.Pending).ToList(),
+            "Rejets" => rows.Where(row => row.Status == BinanceImportStatus.Rejected).ToList(),
+            _ => rows
+        };
+
+        if (!string.IsNullOrWhiteSpace(assetFilter))
+        {
+            rows = rows.Where(row => row.Asset.Contains(assetFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        return rows.ToList();
+    }
+
+    private void RefreshImportDashboard()
+    {
+        ImportVolumeText.Text = Money(_binanceImportEvents.Where(row => row.Category == BinanceImportCategory.TradeLeg).Sum(row => row.QuoteAmount ?? 0m), "EUR/USD");
+        ImportEventCountText.Text = _binanceImportEvents.Count.ToString(FrenchCulture);
+        ImportTradeCountText.Text = _binanceImportEvents.Count(row => row.Category == BinanceImportCategory.TradeLeg).ToString(FrenchCulture);
+        ImportPendingCountText.Text = _binanceImportEvents.Count(row => row.Status == BinanceImportStatus.Pending).ToString(FrenchCulture);
+        ImportAssetCountText.Text = _binanceImportEvents.Select(row => row.Asset).Where(asset => asset != "-").Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString(FrenchCulture);
+        ImportFileText.Text = _loadedImportFiles.Count == 0
+            ? "Aucun export charge."
+            : $"{_loadedImportFiles.Count} export(s), {_loadedImportSourceRows.ToString(FrenchCulture)} lignes source.";
+
+        RefreshImportChart(_binanceImportEvents);
+        RefreshImportAssets(_binanceImportEvents);
+        RefreshRecentOrders(_binanceImportEvents);
+        ApplyImportFilters();
+    }
+
+    private void RefreshImportAssets(IReadOnlyList<BinanceImportEvent> events)
+    {
+        var assets = events
+            .Where(row => row.Asset != "-")
+            .GroupBy(row => row.Asset, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count(row => row.Category == BinanceImportCategory.TradeLeg))
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ImportAssetRow(
+                group.Key,
+                LogoFor(group.Key),
+                AccentFor(group.Key),
+                AssetDescription(group.Key),
+                FormatNumber(group.Sum(row => SignedQuantity(row))),
+                group.Count(row => row.Category == BinanceImportCategory.TradeLeg).ToString(FrenchCulture),
+                group.Count(row => row.Status == BinanceImportStatus.Pending).ToString(FrenchCulture)))
+            .ToList();
+
+        ImportAssetItems.ItemsSource = assets;
+    }
+
+    private void RefreshRecentOrders(IReadOnlyList<BinanceImportEvent> events)
+    {
+        ImportRecentOrdersItems.ItemsSource = events
+            .Where(row => row.Category == BinanceImportCategory.TradeLeg)
+            .OrderByDescending(row => row.ExecutedAt)
+            .Take(8)
+            .Select(row => new RecentOrderRow(
+                LogoFor(row.Asset),
+                AccentFor(row.Asset),
+                $"{row.Kind} {row.Asset}",
+                $"{(row.Quantity.HasValue ? FormatNumber(row.Quantity.Value) : "-")} contre {(row.QuoteAmount.HasValue ? $"{FormatNumber(row.QuoteAmount.Value)} {row.QuoteCurrency}" : "-")} | prix {(row.UnitPrice.HasValue ? FormatNumber(row.UnitPrice.Value) : "-")}",
+                StatusText(row.Status),
+                row.Status == BinanceImportStatus.Importable ? "#22C55E" : "#FBBF24"))
+            .ToList();
+    }
+
+    private void RenumberImportEvents()
+    {
+        var renumbered = _binanceImportEvents
+            .Select((importEvent, index) => importEvent with { EventNumber = index + 1 })
+            .ToList();
+        _binanceImportEvents.Clear();
+        _binanceImportEvents.AddRange(renumbered);
+    }
+
+    private static string ImportEventSignature(BinanceImportEvent importEvent)
+    {
+        var parts = new[]
+        {
+            importEvent.ExecutedAt?.ToString("O", CultureInfo.InvariantCulture) ?? "",
+            importEvent.Kind,
+            importEvent.Asset,
+            importEvent.Quantity?.ToString(CultureInfo.InvariantCulture) ?? "",
+            importEvent.QuoteCurrency,
+            importEvent.QuoteAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
+            importEvent.UnitPrice?.ToString(CultureInfo.InvariantCulture) ?? "",
+            importEvent.FeeAmount?.ToString(CultureInfo.InvariantCulture) ?? "",
+            importEvent.FeeCurrency,
+            importEvent.Category.ToString()
+        };
+
+        return string.Join("|", parts);
+    }
+
+    private BinancePreviewRow ToBinancePreviewRow(BinanceImportEvent row) =>
+        new(
+            row.EventNumber.ToString(FrenchCulture),
+            row.ExecutedAt?.ToLocalTime().ToString("g", FrenchCulture) ?? "-",
+            row.Kind,
+            row.Asset,
+            row.Quantity.HasValue ? FormatNumber(row.Quantity.Value) : "-",
+            row.QuoteAmount.HasValue ? $"{FormatNumber(row.QuoteAmount.Value)} {row.QuoteCurrency}" : "-",
+            row.UnitPrice.HasValue ? $"{FormatNumber(row.UnitPrice.Value)} {row.QuoteCurrency}" : "-",
+            row.FeeAmount.HasValue ? $"{FormatNumber(row.FeeAmount.Value)} {row.FeeCurrency}" : "-",
+            row.SourceRows.ToString(FrenchCulture),
+            StatusText(row.Status),
+            row.Reason);
+
+    private void RefreshImportChart(IReadOnlyList<BinanceImportEvent> events)
+    {
+        if (ImportChartItems is null)
+        {
+            return;
+        }
+
+        var chartRows = new[]
+        {
+            ChartRow("Trades", events.Count(row => row.Category == BinanceImportCategory.TradeLeg), "#22C55E"),
+            ChartRow("Rewards", events.Count(row => row.Category == BinanceImportCategory.Reward), "#38BDF8"),
+            ChartRow("Internes", events.Count(row => row.Category == BinanceImportCategory.InternalMovement), "#94A3B8"),
+            ChartRow("Cash", events.Count(row => row.Category == BinanceImportCategory.CashMovement), "#F59E0B"),
+            ChartRow("Rejets", events.Count(row => row.Status == BinanceImportStatus.Rejected), "#EF4444")
+        };
+        var max = Math.Max(1, chartRows.Max(row => row.RawCount));
+
+        ImportChartItems.ItemsSource = chartRows
+            .Select(row => row with { Width = 360d * row.RawCount / max })
+            .ToList();
+    }
+
+    private static ImportChartRow ChartRow(string label, int count, string color) =>
+        new(label, count.ToString(FrenchCulture), count, 0d, color);
+
+    private static decimal SignedQuantity(BinanceImportEvent importEvent)
+    {
+        var quantity = importEvent.Quantity ?? 0m;
+        return importEvent.Kind == "SELL" ? -quantity : quantity;
+    }
+
+    private static string LogoFor(string asset) =>
+        string.IsNullOrWhiteSpace(asset) || asset == "-"
+            ? "?"
+            : asset.Length <= 3 ? asset : asset[..3];
+
+    private static string AccentFor(string asset) =>
+        asset.ToUpperInvariant() switch
+        {
+            "BTC" => "#F7931A",
+            "ETH" => "#8B9CFF",
+            "USDC" => "#2775CA",
+            "USDT" => "#26A17B",
+            "SOL" => "#14F195",
+            "OPN" or "OPG" => "#FF5A1F",
+            "EUR" => "#F0B90B",
+            _ => "#38BDF8"
+        };
+
+    private static string AssetDescription(string asset) =>
+        asset.ToUpperInvariant() switch
+        {
+            "BTC" => "Bitcoin",
+            "ETH" => "Ethereum",
+            "USDC" => "USD Coin",
+            "USDT" => "Tether USD",
+            "SOL" => "Solana",
+            "EUR" => "Euro cash",
+            _ => "Actif Binance"
+        };
 
     private void BackupDatabase_Click(object sender, RoutedEventArgs e)
     {
@@ -114,7 +358,7 @@ public partial class MainWindow : Window
 
             _store.RestoreDatabase(dialog.FileName);
             DataFeedbackText.Text = $"Base restauree depuis: {dialog.FileName}";
-            FeedbackText.Text = "Portefeuille recharge depuis la base restauree.";
+            DataFeedbackText.Text = "Base restauree. Portefeuille recharge depuis la source SQLite.";
             RefreshPortfolio();
         }
         catch (Exception exception)
@@ -144,13 +388,12 @@ public partial class MainWindow : Window
 
         if (_store.DeleteTransaction(id))
         {
-            FeedbackText.Text = "Transaction supprimee. Portefeuille recalcule depuis le ledger.";
             DataFeedbackText.Text = "Ledger SQLite mis a jour.";
             RefreshPortfolio();
         }
         else
         {
-            FeedbackText.Text = "Transaction introuvable. Rafraichis le journal.";
+            DataFeedbackText.Text = "Transaction introuvable. Rafraichis le journal.";
         }
     }
 
@@ -185,88 +428,35 @@ public partial class MainWindow : Window
 
         if (portfolio.Warnings.Count > 0)
         {
-            FeedbackText.Text = string.Join(Environment.NewLine, portfolio.Warnings);
+            DataFeedbackText.Text = string.Join(Environment.NewLine, portfolio.Warnings);
         }
     }
-
-    private void ResetForm()
-    {
-        ExecutedAtBox.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-        SideBox.SelectedIndex = 0;
-        SymbolBox.Text = string.Empty;
-        AssetNameBox.Text = string.Empty;
-        QuantityBox.Text = string.Empty;
-        UnitPriceBox.Text = string.Empty;
-        QuoteCurrencyBox.Text = "USDT";
-        FeeAmountBox.Text = "0";
-        FeeCurrencyBox.Text = "USDT";
-        SourceBox.Text = "MANUAL";
-        NoteBox.Text = string.Empty;
-    }
-
-    private TradeSide ParseSide()
-    {
-        if (SideBox.SelectedItem is ComboBoxItem item && item.Content is string side)
-        {
-            return Enum.Parse<TradeSide>(side, ignoreCase: true);
-        }
-
-        return TradeSide.Buy;
-    }
-
-    private static DateTimeOffset ParseExecutedAt(string value)
-    {
-        if (DateTime.TryParse(value, FrenchCulture, DateTimeStyles.AssumeLocal, out var frenchDate) ||
-            DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out frenchDate))
-        {
-            return new DateTimeOffset(frenchDate);
-        }
-
-        throw new InvalidOperationException("Date invalide. Format conseille: 2026-04-24 14:30.");
-    }
-
-    private static decimal ParseDecimal(string value, string fieldName)
-    {
-        var normalized = value.Trim().Replace(',', '.');
-        if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-        {
-            return parsed;
-        }
-
-        throw new InvalidOperationException($"Valeur invalide pour {fieldName}.");
-    }
-
-    private static void ValidateTransaction(LedgerTransaction transaction)
-    {
-        if (string.IsNullOrWhiteSpace(transaction.Symbol))
-        {
-            throw new InvalidOperationException("Le symbole est obligatoire.");
-        }
-
-        if (transaction.Quantity <= 0m)
-        {
-            throw new InvalidOperationException("La quantite doit etre positive.");
-        }
-
-        if (transaction.UnitPrice <= 0m)
-        {
-            throw new InvalidOperationException("Le prix unitaire doit etre positif.");
-        }
-
-        if (transaction.FeeAmount < 0m)
-        {
-            throw new InvalidOperationException("Les frais ne peuvent pas etre negatifs.");
-        }
-    }
-
-    private static string DefaultText(string value, string fallback) =>
-        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
     private static string Money(decimal value, string currency) =>
         $"{FormatNumber(value)} {currency}";
 
     private static string FormatNumber(decimal value) =>
         value.ToString("0.########", FrenchCulture);
+
+    private static string CategoryText(BinanceImportCategory category) =>
+        category switch
+        {
+            BinanceImportCategory.TradeLeg => "Trade",
+            BinanceImportCategory.Reward => "Reward",
+            BinanceImportCategory.InternalMovement => "Interne",
+            BinanceImportCategory.CashMovement => "Cash",
+            _ => "Inconnu"
+        };
+
+    private static string StatusText(BinanceImportStatus status) =>
+        status switch
+        {
+            BinanceImportStatus.Importable => "Groupable",
+            BinanceImportStatus.Pending => "A confirmer",
+            BinanceImportStatus.Ignored => "Ignore",
+            BinanceImportStatus.Rejected => "Rejet",
+            _ => status.ToString()
+        };
 
     private sealed record PositionRow(
         string Symbol,
@@ -286,4 +476,36 @@ public partial class MainWindow : Window
         string Fee,
         string Source,
         string Note);
+
+    private sealed record BinancePreviewRow(
+        string EventNumber,
+        string ExecutedAt,
+        string Kind,
+        string Asset,
+        string Quantity,
+        string Quote,
+        string UnitPrice,
+        string Fee,
+        string SourceRows,
+        string Status,
+        string Reason);
+
+    private sealed record ImportChartRow(string Label, string Count, int RawCount, double Width, string Color);
+
+    private sealed record ImportAssetRow(
+        string Asset,
+        string Logo,
+        string Accent,
+        string Description,
+        string NetQuantity,
+        string TradeCount,
+        string PendingCount);
+
+    private sealed record RecentOrderRow(
+        string Logo,
+        string Accent,
+        string Title,
+        string Subtitle,
+        string Status,
+        string StatusColor);
 }
