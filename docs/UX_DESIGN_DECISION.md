@@ -49,14 +49,28 @@ Utiliser des etats lisibles plutot qu'un score abstrait:
 
 ## Etape UX actuelle
 
-Premiere passe:
+Passe UX v2:
 
-- fond sombre coherent
-- KPI dashboard plus sobres
-- suppression de la table positions comme experience principale
-- positions affichees en cartes denses
-- panneau Asset X-Ray a droite
-- journal ledger garde comme table d'audit
+- `MainWindow` devient un shell de coordination.
+- L'UI est decoupee en vues:
+  - `DashboardView`
+  - `PositionsView`
+  - `ImportStudioView`
+  - `DataView`
+- Les briques reutilisables sont dans `Controls`:
+  - `MetricCard`
+  - `AssetPositionCard`
+  - `AssetChip`
+  - `StatusBadge`
+- Le dashboard affiche `Portefeuille valide SQLite`.
+- L'import affiche `Preview Binance non validee`.
+- Les positions signalent les devises mixtes comme `Devise mixte` / `Non consolide`.
+- L'Import Studio a des chips actifs cliquables.
+- Les doublons retires par reconciliation sont visibles en `Quarantaine`.
+- Les graphiques restent ledger-only:
+  - cout suivi par devise
+  - volume par actif
+  - PnL realise par actif
 
 Pas de changement volontaire sur:
 
@@ -64,3 +78,9 @@ Pas de changement volontaire sur:
 - calcul portefeuille
 - import Binance
 - ecriture ledger
+- API Binance
+- prix live/cache marche
+
+## Prochaine limite a traiter
+
+La passe UX v2 ne convertit pas les devises. Si EUR, USDC et USDT coexistent, l'app affiche l'incertitude au lieu de fabriquer un total. La prochaine etape data doit ajouter une vraie strategie de devise de reference et un cache de taux avant tout switch EUR/USDT.

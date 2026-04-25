@@ -36,21 +36,22 @@ C:\Users\1oliv\Documents\localCryptoWpf-spike
 Branche active au moment de cette note:
 
 ```text
-dev
+codex/ux-design
 ```
 
 Derniers commits connus:
 
 ```text
+cfd27b9 Add portfolio UX redesign pass
+5490e82 Update handoff after dev merge
 2c31dbc Document handoff maintenance rule
 6dc3195 Add next chat handoff
 f2d268c Add ledger reset action
-16d60b3 Reconcile Binance import duplicates
-1faa400 Merge portfolio truth upgrade
 ```
 
 `dev` contient `codex/import-reconciliation`.
 `master` pointe encore sur `1faa400` tant que la release stable n'a pas ete validee.
+`codex/ux-design` contient la refonte UX en cours.
 
 Il n'y a pas de remote configure au moment de cette note.
 
@@ -108,13 +109,17 @@ Ce qui existe deja:
 - limite upload: 10 fichiers par selection
 - build par branche
 - tests unitaires sur import, portfolio, clear ledger
+- UI decoupee en vues/controles WPF sur `codex/ux-design`
+- separation visuelle ledger valide / preview Binance
+- chips actifs import cliquables
+- quarantaine import en memoire pour doublons probables
+- graphiques ledger simples sans prix live
 
 Ce qui reste incomplet ou a corriger:
 
-- l'UI reste trop brute et peu lisible
 - le ledger SQLite peut deja contenir des doublons issus d'imports faits avant la branche reconciliation
 - les valeurs portfolio peuvent etre fausses si la base existante n'a pas ete videe puis reimportee proprement
-- `Investi` melange encore les devises quand EUR, USDC, USDT sont presents
+- les devises mixtes sont maintenant signalees comme non consolidees, mais pas encore converties
 - pas encore de switch global EUR / USDT
 - pas encore de prix live/cache marche
 - pas encore de PnL latent fiable

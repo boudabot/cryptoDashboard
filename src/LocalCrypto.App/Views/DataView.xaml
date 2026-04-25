@@ -1,0 +1,48 @@
+<UserControl x:Class="LocalCrypto.App.Views.DataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel x:Name="RootAnchor">
+        <Border Background="#0F172A" BorderBrush="#23314A" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="Donnees" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
+                <TextBlock Text="Source de verite SQLite active" Foreground="#8FA1BD" />
+                <TextBlock x:Name="DataFileText" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#E5E7EB" Margin="0,4,0,12" />
+                <TextBlock Text="Ancien cache Electron: hors flux principal WPF. Ne pas l'utiliser comme source portefeuille." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,12" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Sauvegarder SQLite" Click="Backup_Click" Background="#22C55E" Foreground="#07111F" BorderBrush="#22C55E" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
+                    <Button Content="Restaurer SQLite" Click="Restore_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
+                    <Button Content="Vider ledger" Click="ClearLedger_Click" Background="#7F1D1D" Foreground="White" BorderBrush="#991B1B" FontWeight="SemiBold" Padding="14,10" />
+                </StackPanel>
+                <TextBlock x:Name="DataFeedbackText" Foreground="#8FA1BD" Margin="0,8,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Background="#0F172A" BorderBrush="#23314A" BorderThickness="1" CornerRadius="8" Padding="18">
+            <StackPanel>
+                <TextBlock Text="Journal ledger" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4" />
+                <TextBlock Text="Table d'audit. Le quotidien doit passer par Positions et Import Studio." Foreground="#8FA1BD" Margin="0,0,0,12" />
+                <DataGrid x:Name="TransactionsGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="180" MaxHeight="280"
+                          Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
+                          BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Date" Binding="{Binding ExecutedAt}" Width="150" />
+                        <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="80" />
+                        <DataGridTextColumn Header="Actif" Binding="{Binding Symbol}" Width="90" />
+                        <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
+                        <DataGridTextColumn Header="Prix" Binding="{Binding UnitPrice}" Width="*" />
+                        <DataGridTextColumn Header="Frais" Binding="{Binding Fee}" Width="*" />
+                        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" />
+                        <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="2*" />
+                        <DataGridTemplateColumn Header="" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Supprimer" Tag="{Binding Id}" Click="DeleteTransaction_Click" Padding="8,4" Margin="0" Background="#1F2937" Foreground="#E5E7EB" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
