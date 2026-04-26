@@ -23,7 +23,7 @@
         <Border Background="#0F172A" BorderBrush="#23314A" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="Identifiants locaux" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <TextBlock Text="Utilise une cle API Binance limitee a la lecture. Le secret est chiffre avec la protection Windows de ton utilisateur." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,14" />
+                <TextBlock Text="Utilise une cle API Binance lecture seule. Les champs sont vides apres sauvegarde; le secret n'est jamais reaffiche." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,14" />
 
                 <Grid>
                     <Grid.ColumnDefinitions>

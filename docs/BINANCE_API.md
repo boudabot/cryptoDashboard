@@ -56,6 +56,24 @@ Dans l'app:
 - stockage local: `%APPDATA%\localCrypto\binance-readonly.dat`
 - secret chiffre avec la protection Windows utilisateur courant
 - aucune permission trading ou transfert n'est requise
+- la cle et le secret ne sont pas stockes dans Git
+- la cle et le secret ne sont pas stockes dans SQLite
+- la cle et le secret ne sont pas ecrits dans les docs ou les logs
+- apres sauvegarde, les champs de saisie sont vides
+- le secret n'est jamais reaffiche
+- les messages d'erreur Binance sont limites et nettoyes avant affichage
+
+## Limites de securite explicites
+
+DPAPI `CurrentUser` protege contre la lecture simple du fichier par un autre utilisateur Windows. Ce n'est pas un coffre inviolable contre un logiciel malveillant qui tournerait deja sous le meme compte Windows.
+
+Regle d'exploitation:
+
+- ne jamais envoyer la cle API ou le secret dans un chat
+- ne jamais capturer l'ecran pendant que les champs sont remplis
+- creer la cle en lecture seule
+- supprimer la cle cote Binance si elle a ete exposee
+- ne pas demander a un assistant ou a un script de dechiffrer `%APPDATA%\localCrypto\binance-readonly.dat`
 
 ## Limites connues
 

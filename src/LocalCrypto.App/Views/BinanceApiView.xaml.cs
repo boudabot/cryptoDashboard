@@ -21,10 +21,10 @@ public partial class BinanceApiView : UserControl
         SetBalances([]);
     }
 
-    public void LoadApiKeyHint(string? apiKey)
+    public void ClearCredentialInputs()
     {
-        ApiKeyBox.Text = string.IsNullOrWhiteSpace(apiKey) ? string.Empty : apiKey;
-        ApiSecretBox.Password = string.Empty;
+        ApiKeyBox.Clear();
+        ApiSecretBox.Clear();
     }
 
     public void SetInitialState(bool hasCredentials, string hint)
@@ -67,7 +67,7 @@ public partial class BinanceApiView : UserControl
 
     public void SetError(string message)
     {
-        BinanceFeedbackText.Text = message;
+        BinanceFeedbackText.Text = SanitizeMessage(message);
         BinanceConnectionCard.Value = "Erreur";
         BinanceConnectionCard.Hint = "Verifie la cle, le secret et les droits lecture.";
         BinanceConnectionCard.ValueBrush = "#F87171";
@@ -101,6 +101,26 @@ public partial class BinanceApiView : UserControl
         SaveCredentialsRequested?.Invoke(
             this,
             new BinanceApiCredentials(ApiKeyBox.Text.Trim(), ApiSecretBox.Password.Trim()));
+    }
+
+    private static string SanitizeMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Erreur Binance inconnue.";
+        }
+
+        var sanitized = message;
+        foreach (var marker in new[] { "signature=", "X-MBX-APIKEY", "apiKey=", "apiSecret=", "secret=", "secret:" })
+        {
+            var index = sanitized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index >= 0)
+            {
+                sanitized = sanitized[..index] + $"{marker}<masque>";
+            }
+        }
+
+        return sanitized.Length > 280 ? sanitized[..280] + "..." : sanitized;
     }
 
     private void TestConnection_Click(object sender, RoutedEventArgs e) => TestConnectionRequested?.Invoke(this, EventArgs.Empty);

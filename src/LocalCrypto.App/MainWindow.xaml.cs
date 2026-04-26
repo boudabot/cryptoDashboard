@@ -1,4 +1,7 @@
 using System.IO;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -138,11 +141,11 @@ public partial class MainWindow : Window
                 credentials is not null,
                 credentials is null
                     ? "Aucune cle API locale. Cree une cle Binance lecture seule, colle-la ici, puis teste la connexion."
-                    : $"Cle API locale detectee. Stockage: {_binanceCredentialStore.FilePath}");
+                    : "Cle API locale detectee. Les champs restent vides pour eviter les fuites visuelles.");
         }
         catch (Exception exception)
         {
-            BinanceApiView.SetInitialState(false, $"Impossible de lire les identifiants Binance locaux: {exception.Message}");
+            BinanceApiView.SetInitialState(false, $"Impossible de lire les identifiants Binance locaux: {SafeErrorMessage(exception)}");
         }
     }
 
@@ -151,12 +154,12 @@ public partial class MainWindow : Window
         try
         {
             _binanceCredentialStore.Save(credentials);
-            BinanceApiView.LoadApiKeyHint(credentials.ApiKey);
-            BinanceApiView.SetInitialState(true, $"Cle API enregistree localement. Stockage chiffre: {_binanceCredentialStore.FilePath}");
+            BinanceApiView.ClearCredentialInputs();
+            BinanceApiView.SetInitialState(true, "Cle API enregistree localement et champs effaces. Pour modifier, colle une nouvelle cle et un nouveau secret.");
         }
         catch (Exception exception)
         {
-            BinanceApiView.SetError(exception.Message);
+            BinanceApiView.SetError(SafeErrorMessage(exception));
         }
     }
 
@@ -173,7 +176,7 @@ public partial class MainWindow : Window
     private void BinanceApiView_ClearCredentialsRequested(object? sender, EventArgs e)
     {
         _binanceCredentialStore.Clear();
-        BinanceApiView.LoadApiKeyHint(null);
+        BinanceApiView.ClearCredentialInputs();
         BinanceApiView.SetInitialState(false, "Cle Binance locale effacee.");
     }
 
@@ -202,7 +205,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            BinanceApiView.SetError(exception.Message);
+            BinanceApiView.SetError(SafeErrorMessage(exception));
         }
     }
 
@@ -225,6 +228,20 @@ public partial class MainWindow : Window
         }
 
         return prices;
+    }
+
+    private static string SafeErrorMessage(Exception exception)
+    {
+        return exception switch
+        {
+            BinanceApiException binanceApiException => binanceApiException.Message,
+            HttpRequestException => "Connexion Binance impossible. Verifie Internet ou les restrictions reseau.",
+            CryptographicException => "Identifiants Binance locaux illisibles. Efface la cle locale puis reenregistre-la.",
+            FormatException => "Fichier d'identifiants Binance local invalide. Efface la cle locale puis reenregistre-la.",
+            JsonException => "Reponse Binance ou fichier local illisible.",
+            InvalidOperationException invalidOperationException => invalidOperationException.Message,
+            _ => "Erreur inattendue dans le module Binance API."
+        };
     }
 
     private void ImportStudioView_AddExportRequested(object? sender, EventArgs e)
