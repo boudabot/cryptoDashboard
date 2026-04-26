@@ -123,6 +123,7 @@
                                 BackupRequested="DataView_BackupRequested"
                                 RestoreRequested="DataView_RestoreRequested"
                                 ClearLedgerRequested="DataView_ClearLedgerRequested"
+                                ClearBinanceCacheRequested="DataView_ClearBinanceCacheRequested"
                                 DeleteTransactionRequested="DataView_DeleteTransactionRequested" />
             </Grid>
         </ScrollViewer>

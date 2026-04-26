@@ -257,7 +257,7 @@ public partial class MainWindow : Window
                 $"{UiFormatting.FormatNumber(total)} USDT",
                 syncedAt,
                 klines.Count,
-                $"Binance lu: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s), {pricedRows} prix, {klines.Count} bougie(s) cachees. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
+                $"Source Binance lue: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s) ouvert(s), {pricedRows} prix, {klines.Count} bougie(s) cachees. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
         }
         catch (Exception exception)
         {
@@ -745,6 +745,25 @@ public partial class MainWindow : Window
         DataView.SetFeedback($"{deleted} transaction(s) supprimee(s). Le portefeuille est pret pour un import propre.");
         PositionsView.ResetAssetXray();
         RefreshPortfolio();
+    }
+
+    private void DataView_ClearBinanceCacheRequested(object? sender, EventArgs e)
+    {
+        var confirmation = MessageBox.Show(
+            this,
+            "Purger le cache Binance live ? Les transactions ledger SQLite et la cle API locale ne seront pas supprimees.",
+            "Confirmer la purge du cache Binance",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var deleted = _binanceSnapshotStore.PurgeCache();
+        DataView.SetFeedback($"{deleted} ligne(s) de cache Binance supprimee(s). Le ledger SQLite reste intact.");
+        BinanceApiView.SetInitialState(_binanceCredentialStore.Load() is not null, "Cache Binance purge. Rafraichis Binance pour recreer des snapshots live.");
     }
 
     private void UpdateDataConfidence(PortfolioSnapshot portfolio, IReadOnlyList<LedgerTransaction> transactions)

@@ -51,7 +51,7 @@ f2d268c Add ledger reset action
 
 `dev` et `master` contiennent la branche Binance API read-only validee.
 Les anciennes branches `codex/binance-api-readonly` et `codex/import-reconciliation` ont ete supprimees localement apres merge.
-`codex/binance-data-coverage` ajoute la couverture data Binance live/cache sans ecriture ledger automatique.
+`codex/binance-data-coverage` ajoute la couverture data Binance observable/cache sans ecriture ledger automatique.
 
 Il n'y a pas de remote configure au moment de cette note.
 
@@ -117,6 +117,7 @@ Ce qui existe deja:
 - graphiques ledger simples sans prix live, replies par defaut
 - Binance API read-only: integration initiale pour soldes Spot et prix publics, sans ecriture ledger automatique
 - branche `codex/binance-data-coverage`: Spot + Simple Earn flexible/locked + ordres ouverts + prix publics + cache local de klines/snapshots dans tables `binance_*`
+- hygiene cache Binance: bouton purge cache, ordres ouverts stockes comme dernier etat observe, snapshots prix/actifs limites a 30 jours
 
 Ce qui reste incomplet ou a corriger:
 
@@ -124,7 +125,7 @@ Ce qui reste incomplet ou a corriger:
 - les valeurs portfolio peuvent etre fausses si la base existante n'a pas ete videe puis reimportee proprement
 - les devises mixtes sont maintenant signalees comme non consolidees, mais pas encore converties
 - pas encore de switch global EUR / USDT
-- prix live/cache marche v1 en cours via Binance API, uniquement indicatif et separe du ledger
+- prix/cache marche v1 en cours via Binance API, uniquement indicatif et separe du ledger
 - Binance API ne couvre pas encore Alpha/Auto-Invest de facon complete
 - pas encore de PnL latent fiable
 - `CONVERT`, `REWARD`, `INTERNAL`, `CASH` ne sont pas ecrits automatiquement dans le ledger
@@ -133,6 +134,8 @@ Ce qui reste incomplet ou a corriger:
 - le polish responsive reste a affiner apres test utilisateur: petites largeurs, tables detail, densite des panneaux
 
 Regle importante: il vaut mieux manquer une ligne ambigue que l'ecrire deux fois.
+
+Regle Binance importante: Binance API n'est pas "ce que l'utilisateur possede"; c'est seulement ce que Binance declare maintenant pour ce compte. La cible produit est une comparaison claire entre `ledger valide`, `source Binance observable`, `market cache` et `import preview`.
 
 ## Reponse au dossier UX lab
 

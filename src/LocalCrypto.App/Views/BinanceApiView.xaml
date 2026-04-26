@@ -10,7 +10,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Binance API read-only" FontSize="30" FontWeight="SemiBold" Foreground="White" />
-                <TextBlock Text="Lecture locale Spot, Earn, ordres ouverts et prix publics. Aucun ordre, aucun transfert, aucune ecriture ledger automatique." Foreground="#8FA1BD" Margin="0,4,0,0" />
+                <TextBlock Text="Source observable Binance: Spot, Earn, ordres ouverts et prix publics. Aucun ordre, aucun transfert, aucune ecriture ledger automatique." Foreground="#8FA1BD" Margin="0,4,0,0" />
             </StackPanel>
             <Border Grid.Column="1" Background="#0F172A" BorderBrush="#23314A" BorderThickness="1" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal">
@@ -53,8 +53,8 @@
 
         <UniformGrid x:Name="BinanceMetricsGrid" Columns="4" Margin="0,0,0,14">
             <controls:MetricCard x:Name="BinanceConnectionCard" Label="Connexion" ValueBrush="#FBBF24" />
-                    <controls:MetricCard x:Name="BinanceSpotAssetsCard" Label="Actifs API" ValueBrush="#38BDF8" />
-            <controls:MetricCard x:Name="BinanceApproxValueCard" Label="Estimation live" />
+            <controls:MetricCard x:Name="BinanceSpotAssetsCard" Label="Actifs declares" ValueBrush="#38BDF8" />
+            <controls:MetricCard x:Name="BinanceApproxValueCard" Label="Estimation source" />
             <controls:MetricCard x:Name="BinanceLastSyncCard" Label="Derniere synchro" />
         </UniformGrid>
 
@@ -66,8 +66,8 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Couverture Binance live" Foreground="White" FontSize="20" FontWeight="SemiBold" />
-                        <TextBlock Text="Spot, Earn et ordres ouverts restent separes du ledger SQLite. Les prix sont indicatifs et caches pour les graphes." Foreground="#8FA1BD" />
+                        <TextBlock Text="Source Binance observable" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="Ce que Binance declare maintenant. Donnee separee du ledger SQLite; les prix et ordres ouverts sont indicatifs." Foreground="#8FA1BD" />
                     </StackPanel>
                     <Button Grid.Column="1" Content="Rafraichir Binance" Click="RefreshSpot_Click" Background="#22C55E" Foreground="#07111F" BorderBrush="#22C55E" FontWeight="SemiBold" Padding="14,9" VerticalAlignment="Center" />
                 </Grid>
@@ -95,7 +95,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="Ordres ouverts" Foreground="White" FontSize="18" FontWeight="SemiBold" />
-                        <TextBlock Text="Lecture seule: rien n'est place ou annule depuis localCrypto." Foreground="#8FA1BD" />
+                        <TextBlock Text="Dernier etat observe. Rien n'est place ou annule depuis localCrypto." Foreground="#8FA1BD" />
                     </StackPanel>
                     <TextBlock x:Name="BinanceCacheText" Grid.Column="1" Text="Cache graphes: -" Foreground="#8FA1BD" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
                 </Grid>

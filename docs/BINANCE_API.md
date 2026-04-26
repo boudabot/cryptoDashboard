@@ -5,7 +5,7 @@ Branche de travail initiale: `codex/binance-api-readonly`
 
 ## Decision
 
-On ajoute Binance API comme source live separee du ledger SQLite.
+On ajoute Binance API comme source observable separee du ledger SQLite.
 
 Elle sert a:
 
@@ -14,7 +14,7 @@ Elle sert a:
 - lire les ordres Spot ouverts
 - verifier une cle API read-only
 - recuperer des prix publics indicatifs
-- alimenter un cache local de prix et de bougies pour les futurs graphes
+- alimenter un cache local de prix, de bougies et de snapshots courts pour les futurs graphes
 
 Elle ne sert pas encore a:
 
@@ -35,7 +35,7 @@ L'API Spot donne une vue courante et certains historiques Spot. Les exports rest
 - Auto-Invest
 - Earn/rewards
 
-Regle produit: l'API live enrichit; le ledger SQLite explique.
+Regle produit: Binance declare; le ledger SQLite valide et explique.
 
 ## Documentation officielle consultee
 
@@ -62,18 +62,27 @@ Les donnees live Binance ne sont pas ecrites dans la table `transactions`.
 Elles sont cachees dans des tables separees du meme fichier SQLite:
 
 - `binance_asset_snapshots`
-- `binance_open_order_snapshots`
+- `binance_open_orders_current`
 - `binance_price_snapshots`
 - `binance_klines`
 
 Ces tables servent a:
 
-- garder une trace locale des refreshs API
+- garder une trace locale courte des refreshs API
 - preparer les graphes sans tout rappeler a chaque affichage
-- separer clairement `ledger valide` et `donnees live`
+- separer clairement `ledger valide` et `source Binance observable`
 - faciliter une future reconciliation API -> preview -> validation ledger
 
 Elles ne servent pas a calculer le portefeuille officiel. La source de verite portefeuille reste `transactions`.
+
+Hygiene cache:
+
+- `binance_asset_snapshots` et `binance_price_snapshots` gardent seulement un historique court, actuellement 30 jours
+- `binance_open_orders_current` garde uniquement le dernier etat observe des ordres ouverts
+- `binance_klines` fait un upsert par bougie, symbole et intervalle
+- le bouton `Purger cache Binance` supprime uniquement les tables `binance_*`
+- la purge cache ne supprime ni `transactions`, ni la cle API locale
+- une sauvegarde de `localcrypto.sqlite` contient aussi ces donnees Binance observables; elle doit donc etre protegee comme une donnee personnelle sensible
 
 ## Securite locale
 
@@ -124,4 +133,4 @@ Regle d'exploitation:
 - certains actifs peuvent ne pas avoir de paire `{ASSET}USDT`
 - les actifs `LD...` sont mappes vers leur sous-jacent pour le prix public quand c'est possible
 - Alpha et Auto-Invest demandent encore des endpoints Binance separes ou restent mieux couverts par exports au debut
-- les graphes live temps reel doivent passer plus tard par WebSocket ou refresh controle; cette passe stocke deja les snapshots/klines
+- les graphes temps reel doivent passer plus tard par WebSocket ou refresh controle; cette passe stocke deja les snapshots/klines

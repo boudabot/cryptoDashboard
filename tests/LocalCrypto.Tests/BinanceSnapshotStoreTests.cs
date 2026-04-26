@@ -59,6 +59,35 @@ public sealed class BinanceSnapshotStoreTests
                 ]);
 
             Assert.Equal(1, store.CountKlines());
+            Assert.Equal(1, store.CountCurrentOpenOrders());
+
+            store.SaveSnapshot(
+                DateTimeOffset.Parse("2026-04-26T10:05:00Z"),
+                [],
+                new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase),
+                [
+                    new BinanceOpenOrder(
+                        "BTCUSDT",
+                        2,
+                        "client-2",
+                        "SELL",
+                        "LIMIT",
+                        "NEW",
+                        80000m,
+                        0.01m,
+                        0m,
+                        DateTimeOffset.Parse("2026-04-26T09:03:00Z"),
+                        DateTimeOffset.Parse("2026-04-26T09:04:00Z"))
+                ],
+                []);
+
+            Assert.Equal(1, store.CountCurrentOpenOrders());
+
+            var purged = store.PurgeCache();
+
+            Assert.True(purged > 0);
+            Assert.Equal(0, store.CountKlines());
+            Assert.Equal(0, store.CountCurrentOpenOrders());
         }
         finally
         {

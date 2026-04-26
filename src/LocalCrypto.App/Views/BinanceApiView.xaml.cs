@@ -34,7 +34,7 @@ public partial class BinanceApiView : UserControl
         BinanceConnectionCard.ValueBrush = hasCredentials ? "#38BDF8" : "#FBBF24";
         BinanceSpotAssetsCard.Value = "-";
         BinanceApproxValueCard.Value = "Non consolide";
-        BinanceApproxValueCard.Hint = "Estimation live separee du ledger.";
+        BinanceApproxValueCard.Hint = "Estimation source separee du ledger.";
         BinanceLastSyncCard.Value = "-";
         CredentialHintText.Text = hint;
         BinanceFeedbackText.Text = string.Empty;

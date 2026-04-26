@@ -5,6 +5,8 @@ namespace LocalCrypto.Data;
 
 public sealed class BinanceSnapshotStore
 {
+    private const int SnapshotRetentionDays = 30;
+
     private readonly string _databasePath;
 
     public BinanceSnapshotStore(string databasePath)
@@ -61,6 +63,20 @@ public sealed class BinanceSnapshotStore
 
             CREATE INDEX IF NOT EXISTS idx_binance_open_order_snapshots_synced_at
                 ON binance_open_order_snapshots(synced_at);
+
+            CREATE TABLE IF NOT EXISTS binance_open_orders_current (
+                order_id INTEGER PRIMARY KEY,
+                synced_at TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                side TEXT NOT NULL,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                price REAL NOT NULL,
+                original_quantity REAL NOT NULL,
+                executed_quantity REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
 
             CREATE TABLE IF NOT EXISTS binance_price_snapshots (
                 id TEXT PRIMARY KEY,
@@ -149,34 +165,7 @@ public sealed class BinanceSnapshotStore
             command.ExecuteNonQuery();
         }
 
-        foreach (var order in openOrders)
-        {
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
-                INSERT INTO binance_open_order_snapshots (
-                    id, synced_at, symbol, order_id, side, type, status, price,
-                    original_quantity, executed_quantity, created_at, updated_at
-                )
-                VALUES (
-                    $id, $synced_at, $symbol, $order_id, $side, $type, $status, $price,
-                    $original_quantity, $executed_quantity, $created_at, $updated_at
-                );
-                """;
-            command.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"));
-            command.Parameters.AddWithValue("$synced_at", syncedAt.ToString("O", CultureInfo.InvariantCulture));
-            command.Parameters.AddWithValue("$symbol", order.Symbol);
-            command.Parameters.AddWithValue("$order_id", order.OrderId);
-            command.Parameters.AddWithValue("$side", order.Side);
-            command.Parameters.AddWithValue("$type", order.Type);
-            command.Parameters.AddWithValue("$status", order.Status);
-            command.Parameters.AddWithValue("$price", order.Price);
-            command.Parameters.AddWithValue("$original_quantity", order.OriginalQuantity);
-            command.Parameters.AddWithValue("$executed_quantity", order.ExecutedQuantity);
-            command.Parameters.AddWithValue("$created_at", order.CreatedAt.ToString("O", CultureInfo.InvariantCulture));
-            command.Parameters.AddWithValue("$updated_at", order.UpdatedAt.ToString("O", CultureInfo.InvariantCulture));
-            command.ExecuteNonQuery();
-        }
+        ReplaceCurrentOpenOrders(connection, transaction, syncedAt, openOrders);
 
         foreach (var kline in klines)
         {
@@ -213,6 +202,8 @@ public sealed class BinanceSnapshotStore
             command.ExecuteNonQuery();
         }
 
+        DeleteRowsOlderThan(connection, transaction, "binance_asset_snapshots", syncedAt.AddDays(-SnapshotRetentionDays));
+        DeleteRowsOlderThan(connection, transaction, "binance_price_snapshots", syncedAt.AddDays(-SnapshotRetentionDays));
         transaction.Commit();
     }
 
@@ -222,6 +213,93 @@ public sealed class BinanceSnapshotStore
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM binance_klines;";
         return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public int CountCurrentOpenOrders()
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM binance_open_orders_current;";
+        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public int PurgeCache()
+    {
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction();
+        var deleted = 0;
+        foreach (var table in new[]
+        {
+            "binance_asset_snapshots",
+            "binance_open_order_snapshots",
+            "binance_open_orders_current",
+            "binance_price_snapshots",
+            "binance_klines"
+        })
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $"DELETE FROM {table};";
+            deleted += command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+        return deleted;
+    }
+
+    private static void ReplaceCurrentOpenOrders(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        DateTimeOffset syncedAt,
+        IReadOnlyList<BinanceOpenOrder> openOrders)
+    {
+        using (var clearCommand = connection.CreateCommand())
+        {
+            clearCommand.Transaction = transaction;
+            clearCommand.CommandText = "DELETE FROM binance_open_orders_current;";
+            clearCommand.ExecuteNonQuery();
+        }
+
+        foreach (var order in openOrders)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                INSERT INTO binance_open_orders_current (
+                    order_id, synced_at, symbol, side, type, status, price,
+                    original_quantity, executed_quantity, created_at, updated_at
+                )
+                VALUES (
+                    $order_id, $synced_at, $symbol, $side, $type, $status, $price,
+                    $original_quantity, $executed_quantity, $created_at, $updated_at
+                );
+                """;
+            command.Parameters.AddWithValue("$order_id", order.OrderId);
+            command.Parameters.AddWithValue("$synced_at", syncedAt.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("$symbol", order.Symbol);
+            command.Parameters.AddWithValue("$side", order.Side);
+            command.Parameters.AddWithValue("$type", order.Type);
+            command.Parameters.AddWithValue("$status", order.Status);
+            command.Parameters.AddWithValue("$price", order.Price);
+            command.Parameters.AddWithValue("$original_quantity", order.OriginalQuantity);
+            command.Parameters.AddWithValue("$executed_quantity", order.ExecutedQuantity);
+            command.Parameters.AddWithValue("$created_at", order.CreatedAt.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("$updated_at", order.UpdatedAt.ToString("O", CultureInfo.InvariantCulture));
+            command.ExecuteNonQuery();
+        }
+    }
+
+    private static void DeleteRowsOlderThan(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table,
+        DateTimeOffset cutoff)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"DELETE FROM {table} WHERE synced_at < $cutoff;";
+        command.Parameters.AddWithValue("$cutoff", cutoff.ToString("O", CultureInfo.InvariantCulture));
+        command.ExecuteNonQuery();
     }
 
     private SqliteConnection OpenConnection()

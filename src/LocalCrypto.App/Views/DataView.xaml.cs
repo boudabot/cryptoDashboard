@@ -8,6 +8,7 @@ public partial class DataView : UserControl
     public event EventHandler? BackupRequested;
     public event EventHandler? RestoreRequested;
     public event EventHandler? ClearLedgerRequested;
+    public event EventHandler? ClearBinanceCacheRequested;
     public event EventHandler<string>? DeleteTransactionRequested;
 
     public DataView()
@@ -26,6 +27,8 @@ public partial class DataView : UserControl
     private void Restore_Click(object sender, RoutedEventArgs e) => RestoreRequested?.Invoke(this, EventArgs.Empty);
 
     private void ClearLedger_Click(object sender, RoutedEventArgs e) => ClearLedgerRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ClearBinanceCache_Click(object sender, RoutedEventArgs e) => ClearBinanceCacheRequested?.Invoke(this, EventArgs.Empty);
 
     private void DeleteTransaction_Click(object sender, RoutedEventArgs e)
     {

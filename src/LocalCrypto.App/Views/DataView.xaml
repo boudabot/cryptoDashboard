@@ -7,10 +7,11 @@
                 <TextBlock Text="Donnees" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
                 <TextBlock Text="Source de verite SQLite active" Foreground="#8FA1BD" />
                 <TextBlock x:Name="DataFileText" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#E5E7EB" Margin="0,4,0,12" />
-                <TextBlock Text="Ancien cache Electron: hors flux principal WPF. Ne pas l'utiliser comme source portefeuille." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,12" />
+                <TextBlock Text="La sauvegarde SQLite contient le ledger valide et le cache Binance live. Le cache Binance est indicatif et peut etre purge sans toucher aux transactions." Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,0,0,12" />
                 <StackPanel Orientation="Horizontal">
                     <Button Content="Sauvegarder SQLite" Click="Backup_Click" Background="#22C55E" Foreground="#07111F" BorderBrush="#22C55E" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
                     <Button Content="Restaurer SQLite" Click="Restore_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
+                    <Button Content="Purger cache Binance" Click="ClearBinanceCache_Click" Background="#1F2937" Foreground="#E5E7EB" BorderBrush="#334155" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
                     <Button Content="Vider ledger" Click="ClearLedger_Click" Background="#7F1D1D" Foreground="White" BorderBrush="#991B1B" FontWeight="SemiBold" Padding="14,10" />
                 </StackPanel>
                 <TextBlock x:Name="DataFeedbackText" Foreground="#8FA1BD" Margin="0,8,0,0" TextWrapping="Wrap" />
