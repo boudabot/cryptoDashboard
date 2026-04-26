@@ -6,3 +6,7 @@ release/
 TestResults/
 *.user
 *.suo
+binance-readonly.dat
+*.secret
+*.key
+*.apikey

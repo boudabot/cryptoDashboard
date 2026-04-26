@@ -136,22 +136,7 @@ public sealed class BinanceApiClient
             // Keep the generic HTTP message. Raw bodies may contain implementation details.
         }
 
-        throw new BinanceApiException(statusCode, SanitizeApiMessage(message));
-    }
-
-    private static string SanitizeApiMessage(string message)
-    {
-        var sanitized = message;
-        foreach (var marker in new[] { "signature=", "X-MBX-APIKEY", "apiKey=", "apiSecret=", "secret=", "secret:" })
-        {
-            var index = sanitized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (index >= 0)
-            {
-                sanitized = sanitized[..index] + $"{marker}<masque>";
-            }
-        }
-
-        return sanitized.Length > 240 ? sanitized[..240] + "..." : sanitized;
+        throw new BinanceApiException(statusCode, SensitiveTextSanitizer.Sanitize(message, 240));
     }
 
     private static decimal ParseDecimal(string value) =>

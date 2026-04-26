@@ -82,6 +82,32 @@ public sealed class BinanceApiClientTests
         Assert.Contains("signature=", query);
     }
 
+    [Fact]
+    public async Task AccountErrorDoesNotExposeSensitiveResponseValues()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = Json("""
+            {
+              "code": -1022,
+              "msg": "bad request apiKey=PUBLIC-KEY secret=PRIVATE-SECRET signature=SIGNED-VALUE"
+            }
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var exception = await Assert.ThrowsAsync<BinanceApiException>(() =>
+            client.GetAccountSnapshotAsync(new BinanceApiCredentials("PUBLIC-KEY", "PRIVATE-SECRET")));
+
+        Assert.DoesNotContain("PUBLIC-KEY", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE-SECRET", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("SIGNED-VALUE", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("<masque>", exception.Message, StringComparison.Ordinal);
+    }
+
     private static StringContent Json(string json) =>
         new(json, Encoding.UTF8, "application/json");
 
