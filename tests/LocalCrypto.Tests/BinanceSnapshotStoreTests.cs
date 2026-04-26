@@ -62,7 +62,8 @@ public sealed class BinanceSnapshotStoreTests
             Assert.Equal(1, store.CountCurrentOpenOrders());
             var latest = store.LoadLatestSnapshot();
             Assert.NotNull(latest);
-            Assert.Equal("ETH", Assert.Single(latest!.Assets).UnderlyingAsset);
+            var asset = Assert.Single(latest!.Assets);
+            Assert.Equal("ETH", asset.UnderlyingAsset);
             Assert.Equal("ETHUSDT", Assert.Single(latest.OpenOrders).Symbol);
 
             store.SaveSnapshot(

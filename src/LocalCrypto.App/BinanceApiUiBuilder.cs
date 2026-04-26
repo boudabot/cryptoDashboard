@@ -18,8 +18,17 @@ public static class BinanceApiUiBuilder
         IReadOnlyList<BinanceEarnPosition> earnPositions,
         IReadOnlyDictionary<string, decimal> pricesByAsset)
     {
-        var rows = new List<BinanceLiveBalanceRow>();
-        rows.AddRange(spotSnapshot.Balances.Select(balance => ToRow(
+        var cachedRows = BuildCachedRows(spotSnapshot, earnPositions, pricesByAsset);
+        return ToLiveRows(cachedRows);
+    }
+
+    public static IReadOnlyList<BinanceCachedAssetSnapshot> BuildCachedRows(
+        BinanceAccountSnapshot spotSnapshot,
+        IReadOnlyList<BinanceEarnPosition> earnPositions,
+        IReadOnlyDictionary<string, decimal> pricesByAsset)
+    {
+        var rows = new List<BinanceCachedAssetSnapshot>();
+        rows.AddRange(spotSnapshot.Balances.Select(balance => ToCachedRow(
             "Spot",
             balance.Asset,
             UnderlyingAssetFor(balance.Asset),
@@ -28,7 +37,7 @@ public static class BinanceApiUiBuilder
             balance.Total,
             pricesByAsset)));
 
-        rows.AddRange(earnPositions.Select(position => ToRow(
+        rows.AddRange(earnPositions.Select(position => ToCachedRow(
             position.Source,
             position.Asset,
             UnderlyingAssetFor(position.Asset),
@@ -38,13 +47,17 @@ public static class BinanceApiUiBuilder
             pricesByAsset,
             position.Status)));
 
-        return rows
+        return BinanceSourceConsolidator.MarkLdMirrors(rows);
+    }
+
+    public static IReadOnlyList<BinanceLiveBalanceRow> ToLiveRows(IReadOnlyList<BinanceCachedAssetSnapshot> cachedRows) =>
+        cachedRows
+            .Select(ToLiveRow)
             .OrderByDescending(item => item.ValueUsdtValue ?? 0m)
             .ThenBy(item => SourceRank(item.Source))
             .ThenBy(item => item.UnderlyingAsset, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Asset, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
 
     public static IReadOnlyList<BinanceOpenOrderRow> BuildOpenOrderRows(IReadOnlyList<BinanceOpenOrder> orders) =>
         orders.Select(order => new BinanceOpenOrderRow(
@@ -69,8 +82,8 @@ public static class BinanceApiUiBuilder
                 BrushFor(comparison.StatusTone)))
             .ToList();
 
-    public static decimal TotalUsdt(IReadOnlyList<BinanceLiveBalanceRow> rows) =>
-        rows.Sum(row => row.ValueUsdtValue ?? 0m);
+    public static decimal TotalUsdt(IReadOnlyList<BinanceCachedAssetSnapshot> rows) =>
+        BinanceSourceConsolidator.Consolidate(rows).Sum(row => row.ValueUsdt ?? 0m);
 
     public static IReadOnlyList<string> AssetsNeedingMarketData(IReadOnlyList<BinanceLiveBalanceRow> rows) =>
         rows.Select(row => row.UnderlyingAsset)
@@ -95,7 +108,7 @@ public static class BinanceApiUiBuilder
     public static string UnderlyingAssetFor(string asset)
         => BinanceAssetNormalizer.UnderlyingAssetFor(asset);
 
-    private static BinanceLiveBalanceRow ToRow(
+    private static BinanceCachedAssetSnapshot ToCachedRow(
         string source,
         string asset,
         string underlyingAsset,
@@ -110,22 +123,34 @@ public static class BinanceApiUiBuilder
         var value = hasPrice ? total * price : (decimal?)null;
         var status = StatusFor(asset, underlyingAsset, hasPrice, sourceStatus);
 
-        return new BinanceLiveBalanceRow(
+        return new BinanceCachedAssetSnapshot(
             source,
             asset.ToUpperInvariant(),
             underlyingAsset.ToUpperInvariant(),
-            UiFormatting.FormatNumber(free),
-            UiFormatting.FormatNumber(locked),
-            UiFormatting.FormatNumber(total),
-            hasPrice ? $"{UiFormatting.FormatNumber(price)} USDT" : "-",
-            value is not null ? $"{UiFormatting.FormatNumber(value.Value)} USDT" : "Non cote",
-            status,
             free,
             locked,
             total,
             hasPrice ? price : null,
-            value);
+            value,
+            status);
     }
+
+    private static BinanceLiveBalanceRow ToLiveRow(BinanceCachedAssetSnapshot row) =>
+        new(
+            row.Source,
+            row.Asset,
+            row.UnderlyingAsset,
+            UiFormatting.FormatNumber(row.FreeAmount),
+            UiFormatting.FormatNumber(row.LockedAmount),
+            UiFormatting.FormatNumber(row.TotalAmount),
+            row.PriceUsdt is not null ? $"{UiFormatting.FormatNumber(row.PriceUsdt.Value)} USDT" : "-",
+            row.ValueUsdt is not null ? $"{UiFormatting.FormatNumber(row.ValueUsdt.Value)} USDT" : "Non consolide",
+            row.Status,
+            row.FreeAmount,
+            row.LockedAmount,
+            row.TotalAmount,
+            row.PriceUsdt,
+            row.ValueUsdt);
 
     private static decimal PriceFor(string asset, IReadOnlyDictionary<string, decimal> pricesByAsset)
     {

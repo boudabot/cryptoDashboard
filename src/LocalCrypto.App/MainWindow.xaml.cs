@@ -239,18 +239,20 @@ public partial class MainWindow : Window
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
             var prices = await LoadBinancePricesAsync(assetUniverse, cancellation.Token);
-            var rows = BinanceApiUiBuilder.BuildRows(snapshot, earnPositions, prices);
+            var cachedRows = BinanceApiUiBuilder.BuildCachedRows(snapshot, earnPositions, prices);
+            var rows = BinanceApiUiBuilder.ToLiveRows(cachedRows);
             var openOrders = await LoadOpenOrdersAsync(credentials, warnings, cancellation.Token);
             var klines = await LoadBinanceKlinesAsync(BinanceApiUiBuilder.AssetsNeedingMarketData(rows), cancellation.Token);
             var syncedAt = DateTimeOffset.UtcNow;
-            _binanceSnapshotStore.SaveSnapshot(syncedAt, ToCachedAssetRows(rows), prices, openOrders, klines);
+            _binanceSnapshotStore.SaveSnapshot(syncedAt, cachedRows, prices, openOrders, klines);
             var latestSnapshot = _binanceSnapshotStore.LoadLatestSnapshot();
             var comparisons = BinanceLedgerReconciler.Compare(
                 PortfolioCalculator.Calculate(_store.ListTransactions()),
                 latestSnapshot);
 
-            var total = BinanceApiUiBuilder.TotalUsdt(rows);
+            var total = BinanceApiUiBuilder.TotalUsdt(cachedRows);
             var pricedRows = rows.Count(row => row.PriceUsdt != "-");
+            var ignoredMirrors = cachedRows.Count(BinanceSourceConsolidator.IsIgnoredLdMirror);
             var earnSummary = earnAccount is null
                 ? "Earn indisponible"
                 : $"Earn {UiFormatting.FormatNumber(earnAccount.TotalAmountInUSDT)} USDT";
@@ -262,7 +264,7 @@ public partial class MainWindow : Window
                 $"{UiFormatting.FormatNumber(total)} USDT",
                 syncedAt,
                 klines.Count,
-                $"Source Binance lue: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s) ouvert(s), {pricedRows} prix, {klines.Count} bougie(s) cachees. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
+                $"Source Binance lue: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s) ouvert(s), {pricedRows} prix, {klines.Count} bougie(s) cachees, {ignoredMirrors} miroir(s) LD ignores du total. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
         }
         catch (Exception exception)
         {
@@ -296,19 +298,6 @@ public partial class MainWindow : Window
 
         return prices;
     }
-
-    private static IReadOnlyList<BinanceCachedAssetSnapshot> ToCachedAssetRows(IReadOnlyList<BinanceLiveBalanceRow> rows) =>
-        rows.Select(row => new BinanceCachedAssetSnapshot(
-                row.Source,
-                row.Asset,
-                row.UnderlyingAsset,
-                row.FreeAmount,
-                row.LockedAmount,
-                row.TotalAmount,
-                row.PriceUsdtValue,
-                row.ValueUsdtValue,
-                row.Status))
-            .ToList();
 
     private async Task<BinanceSimpleEarnAccount?> TryLoadSimpleEarnAccountAsync(
         BinanceApiCredentials credentials,

@@ -22,6 +22,28 @@ public sealed class BinanceLedgerReconcilerTests
     }
 
     [Fact]
+    public void CompareIgnoresLdMirrorWhenEarnRowExistsForSameAsset()
+    {
+        var ledger = PortfolioCalculator.Calculate(
+        [
+            Buy("ETH", 0.66m)
+        ]);
+        var rawRows = new[]
+        {
+            new BinanceCachedAssetSnapshot("Spot", "LDETH", "ETH", 0.64m, 0m, 0.64m, 2000m, 1280m, "LD mappe"),
+            new BinanceCachedAssetSnapshot("Earn flexible", "ETH", "ETH", 0.66m, 0m, 0.66m, 2000m, 1320m, "Auto")
+        };
+        var markedRows = BinanceSourceConsolidator.MarkLdMirrors(rawRows);
+        var binance = Snapshot(markedRows.ToArray());
+
+        var comparison = Assert.Single(BinanceLedgerReconciler.Compare(ledger, binance));
+
+        Assert.Equal("OK", comparison.Status);
+        Assert.Equal(0.66m, comparison.BinanceQuantity);
+        Assert.Contains(markedRows, row => row.Asset == "LDETH" && BinanceSourceConsolidator.IsIgnoredLdMirror(row));
+    }
+
+    [Fact]
     public void CompareMarksDifferenceBetweenLedgerAndBinance()
     {
         var ledger = PortfolioCalculator.Calculate(

@@ -17,7 +17,7 @@ public static class BinanceLedgerReconciler
                 group => group.Sum(position => position.Quantity),
                 StringComparer.OrdinalIgnoreCase);
 
-        var binanceByAsset = (binanceSnapshot?.Assets ?? [])
+        var binanceByAsset = BinanceSourceConsolidator.Consolidate(binanceSnapshot?.Assets ?? [])
             .GroupBy(row => NormalizeAsset(row.UnderlyingAsset), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
