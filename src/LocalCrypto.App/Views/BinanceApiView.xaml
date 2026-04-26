@@ -91,6 +91,29 @@
                 <Grid Margin="0,18,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Reconciliation ledger / source Binance" Foreground="White" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock x:Name="BinanceComparisonHintText" Text="Compare le ledger valide avec la derniere observation Binance." Foreground="#8FA1BD" />
+                    </StackPanel>
+                </Grid>
+
+                <DataGrid x:Name="BinanceComparisonGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="120" MaxHeight="240"
+                          Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
+                          BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Actif" Binding="{Binding Asset}" Width="120" />
+                        <DataGridTextColumn Header="Ledger valide" Binding="{Binding LedgerQuantity}" Width="*" />
+                        <DataGridTextColumn Header="Source Binance" Binding="{Binding BinanceQuantity}" Width="*" />
+                        <DataGridTextColumn Header="Ecart" Binding="{Binding Difference}" Width="*" />
+                        <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Grid Margin="0,18,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>

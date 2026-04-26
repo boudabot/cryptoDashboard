@@ -244,6 +244,10 @@ public partial class MainWindow : Window
             var klines = await LoadBinanceKlinesAsync(BinanceApiUiBuilder.AssetsNeedingMarketData(rows), cancellation.Token);
             var syncedAt = DateTimeOffset.UtcNow;
             _binanceSnapshotStore.SaveSnapshot(syncedAt, ToCachedAssetRows(rows), prices, openOrders, klines);
+            var latestSnapshot = _binanceSnapshotStore.LoadLatestSnapshot();
+            var comparisons = BinanceLedgerReconciler.Compare(
+                PortfolioCalculator.Calculate(_store.ListTransactions()),
+                latestSnapshot);
 
             var total = BinanceApiUiBuilder.TotalUsdt(rows);
             var pricedRows = rows.Count(row => row.PriceUsdt != "-");
@@ -253,6 +257,7 @@ public partial class MainWindow : Window
             var warningText = warnings.Count == 0 ? string.Empty : $" Limites: {string.Join("; ", warnings)}.";
             BinanceApiView.SetSyncResult(
                 rows,
+                BinanceApiUiBuilder.BuildComparisonRows(comparisons),
                 BinanceApiUiBuilder.BuildOpenOrderRows(openOrders),
                 $"{UiFormatting.FormatNumber(total)} USDT",
                 syncedAt,

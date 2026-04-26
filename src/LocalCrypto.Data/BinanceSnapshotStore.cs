@@ -223,6 +223,20 @@ public sealed class BinanceSnapshotStore
         return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
+    public BinanceLatestSnapshot? LoadLatestSnapshot()
+    {
+        using var connection = OpenConnection();
+        var syncedAt = LoadLatestSyncedAt(connection);
+        if (syncedAt is null)
+        {
+            return null;
+        }
+
+        var assets = LoadAssetsForSync(connection, syncedAt.Value);
+        var orders = LoadCurrentOpenOrders(connection);
+        return new BinanceLatestSnapshot(syncedAt.Value, assets, orders);
+    }
+
     public int PurgeCache()
     {
         using var connection = OpenConnection();
@@ -302,6 +316,80 @@ public sealed class BinanceSnapshotStore
         command.ExecuteNonQuery();
     }
 
+    private static DateTimeOffset? LoadLatestSyncedAt(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT MAX(synced_at) FROM binance_asset_snapshots;";
+        var value = command.ExecuteScalar() as string;
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+    }
+
+    private static IReadOnlyList<BinanceCachedAssetSnapshot> LoadAssetsForSync(
+        SqliteConnection connection,
+        DateTimeOffset syncedAt)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT source, asset, underlying_asset, free_amount, locked_amount,
+                   total_amount, price_usdt, value_usdt, status
+            FROM binance_asset_snapshots
+            WHERE synced_at = $synced_at
+            ORDER BY underlying_asset, source, asset;
+            """;
+        command.Parameters.AddWithValue("$synced_at", syncedAt.ToString("O", CultureInfo.InvariantCulture));
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<BinanceCachedAssetSnapshot>();
+        while (reader.Read())
+        {
+            rows.Add(new BinanceCachedAssetSnapshot(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetDecimal(3),
+                reader.GetDecimal(4),
+                reader.GetDecimal(5),
+                reader.IsDBNull(6) ? null : reader.GetDecimal(6),
+                reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                reader.GetString(8)));
+        }
+
+        return rows;
+    }
+
+    private static IReadOnlyList<BinanceOpenOrder> LoadCurrentOpenOrders(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT symbol, order_id, side, type, status, price, original_quantity,
+                   executed_quantity, created_at, updated_at
+            FROM binance_open_orders_current
+            ORDER BY updated_at DESC, order_id DESC;
+            """;
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<BinanceOpenOrder>();
+        while (reader.Read())
+        {
+            rows.Add(new BinanceOpenOrder(
+                reader.GetString(0),
+                reader.GetInt64(1),
+                string.Empty,
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetDecimal(5),
+                reader.GetDecimal(6),
+                reader.GetDecimal(7),
+                DateTimeOffset.Parse(reader.GetString(8), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                DateTimeOffset.Parse(reader.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)));
+        }
+
+        return rows;
+    }
+
     private SqliteConnection OpenConnection()
     {
         var builder = new SqliteConnectionStringBuilder
@@ -326,3 +414,8 @@ public sealed record BinanceCachedAssetSnapshot(
     decimal? PriceUsdt,
     decimal? ValueUsdt,
     string Status);
+
+public sealed record BinanceLatestSnapshot(
+    DateTimeOffset SyncedAt,
+    IReadOnlyList<BinanceCachedAssetSnapshot> Assets,
+    IReadOnlyList<BinanceOpenOrder> OpenOrders);

@@ -58,6 +58,17 @@ public static class BinanceApiUiBuilder
                 order.UpdatedAt.ToLocalTime().ToString("dd/MM HH:mm", UiFormatting.FrenchCulture)))
             .ToList();
 
+    public static IReadOnlyList<BinanceLedgerComparisonRow> BuildComparisonRows(
+        IReadOnlyList<BinanceLedgerComparison> comparisons) =>
+        comparisons.Select(comparison => new BinanceLedgerComparisonRow(
+                comparison.Asset,
+                UiFormatting.FormatNumber(comparison.LedgerQuantity),
+                UiFormatting.FormatNumber(comparison.BinanceQuantity),
+                UiFormatting.FormatNumber(comparison.Difference),
+                comparison.Status,
+                BrushFor(comparison.StatusTone)))
+            .ToList();
+
     public static decimal TotalUsdt(IReadOnlyList<BinanceLiveBalanceRow> rows) =>
         rows.Sum(row => row.ValueUsdtValue ?? 0m);
 
@@ -82,12 +93,7 @@ public static class BinanceApiUiBuilder
     }
 
     public static string UnderlyingAssetFor(string asset)
-    {
-        var normalized = asset.Trim().ToUpperInvariant();
-        return normalized.StartsWith("LD", StringComparison.OrdinalIgnoreCase) && normalized.Length > 2
-            ? normalized[2..]
-            : normalized;
-    }
+        => BinanceAssetNormalizer.UnderlyingAssetFor(asset);
 
     private static BinanceLiveBalanceRow ToRow(
         string source,
@@ -188,4 +194,12 @@ public static class BinanceApiUiBuilder
 
         return string.Empty;
     }
+
+    private static string BrushFor(string tone) => tone switch
+    {
+        "Good" => "#22C55E",
+        "Warning" => "#FBBF24",
+        "Danger" => "#F87171",
+        _ => "#94A3B8"
+    };
 }

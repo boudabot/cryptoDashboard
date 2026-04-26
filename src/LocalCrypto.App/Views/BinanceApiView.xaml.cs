@@ -18,7 +18,7 @@ public partial class BinanceApiView : UserControl
     {
         InitializeComponent();
         SetInitialState(false, "Aucune cle API enregistree.");
-        SetCoverage([], [], 0);
+        SetCoverage([], [], [], 0, null);
     }
 
     public void ClearCredentialInputs()
@@ -39,6 +39,7 @@ public partial class BinanceApiView : UserControl
         CredentialHintText.Text = hint;
         BinanceFeedbackText.Text = string.Empty;
         BinanceCacheText.Text = "Cache graphes: -";
+        BinanceComparisonHintText.Text = "Compare le ledger valide avec la derniere observation Binance.";
         SetConnectionStatus(hasCredentials ? "Cle locale" : "Non connecte", hasCredentials ? "#38BDF8" : "#64748B");
     }
 
@@ -50,13 +51,14 @@ public partial class BinanceApiView : UserControl
 
     public void SetSyncResult(
         IReadOnlyList<BinanceLiveBalanceRow> rows,
+        IReadOnlyList<BinanceLedgerComparisonRow> comparisons,
         IReadOnlyList<BinanceOpenOrderRow> openOrders,
         string approximateValue,
         DateTimeOffset syncedAt,
         int cachedKlines,
         string feedback)
     {
-        SetCoverage(rows, openOrders, cachedKlines);
+        SetCoverage(rows, comparisons, openOrders, cachedKlines, syncedAt);
         BinanceConnectionCard.Value = "OK";
         BinanceConnectionCard.Hint = "Connexion Binance read-only validee.";
         BinanceConnectionCard.ValueBrush = "#22C55E";
@@ -90,12 +92,18 @@ public partial class BinanceApiView : UserControl
 
     private void SetCoverage(
         IReadOnlyList<BinanceLiveBalanceRow> rows,
+        IReadOnlyList<BinanceLedgerComparisonRow> comparisons,
         IReadOnlyList<BinanceOpenOrderRow> openOrders,
-        int cachedKlines)
+        int cachedKlines,
+        DateTimeOffset? syncedAt)
     {
         BinanceBalancesGrid.ItemsSource = rows;
+        BinanceComparisonGrid.ItemsSource = comparisons;
         BinanceOpenOrdersGrid.ItemsSource = openOrders;
         BinanceCacheText.Text = $"Cache graphes: {cachedKlines.ToString(UiFormatting.FrenchCulture)} bougie(s) locales";
+        BinanceComparisonHintText.Text = syncedAt is null
+            ? "Compare le ledger valide avec la derniere observation Binance."
+            : $"Derniere observation Binance: {syncedAt.Value.ToLocalTime():dd/MM HH:mm}. Les ecarts n'ecrivent pas le ledger.";
     }
 
     private void SetConnectionStatus(string text, string brush)

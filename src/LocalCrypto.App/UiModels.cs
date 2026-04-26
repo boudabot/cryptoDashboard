@@ -141,3 +141,11 @@ public sealed record BinanceOpenOrderRow(
     string Quantity,
     string Executed,
     string UpdatedAt);
+
+public sealed record BinanceLedgerComparisonRow(
+    string Asset,
+    string LedgerQuantity,
+    string BinanceQuantity,
+    string Difference,
+    string Status,
+    string StatusBrush);
