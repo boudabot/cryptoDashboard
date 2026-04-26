@@ -1,0 +1,36 @@
+<UserControl x:Class="LocalCrypto.App.Views.ReconciliationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LocalCrypto.App.Controls">
+    <StackPanel x:Name="RootAnchor">
+        <Grid Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Ecarts / Reconciliation" FontSize="30" FontWeight="SemiBold" Foreground="White" />
+                <TextBlock Text="Compare la verite ledger SQLite avec la derniere observation Binance. Aucun ecart ne modifie automatiquement le ledger." Foreground="#8FA1BD" Margin="0,4,0,0" />
+            </StackPanel>
+        </Grid>
+
+        <UniformGrid x:Name="MetricsGrid" Columns="4" Margin="0,0,0,16">
+            <controls:MetricCard x:Name="ComparedAssetsCard" Label="Actifs compares" ValueBrush="#38BDF8" />
+            <controls:MetricCard x:Name="OkAssetsCard" Label="OK" ValueBrush="#22C55E" />
+            <controls:MetricCard x:Name="WarningAssetsCard" Label="A rapprocher" ValueBrush="#FBBF24" />
+            <controls:MetricCard x:Name="SnapshotCard" Label="Snapshot Binance" ValueBrush="#F0B90B" />
+        </UniformGrid>
+
+        <Border Background="{StaticResource Brush.Card}" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="18" Effect="{StaticResource Effect.PanelGlow}">
+            <StackPanel>
+                <TextBlock Text="Ledger valide vs Source Binance" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock x:Name="HintText" Text="Rafraichis Binance API pour remplir cette vue." Foreground="#8FA1BD" Margin="0,4,0,12" TextWrapping="Wrap" />
+                <DataGrid x:Name="ComparisonGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="340">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Actif" Binding="{Binding Asset}" Width="120" />
+                        <DataGridTextColumn Header="Ledger valide" Binding="{Binding LedgerQuantity}" Width="*" />
+                        <DataGridTextColumn Header="Source Binance" Binding="{Binding BinanceQuantity}" Width="*" />
+                        <DataGridTextColumn Header="Ecart" Binding="{Binding Difference}" Width="*" />
+                        <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

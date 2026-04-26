@@ -27,15 +27,13 @@
                     <ColumnDefinition x:Name="PositionsXrayColumn" Width="0.95*" />
                 </Grid.ColumnDefinitions>
 
-                <ScrollViewer x:Name="PositionListHost" Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" MaxHeight="430">
-                    <ItemsControl x:Name="PositionCardsItems">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <controls:AssetPositionCard ProofRequested="AssetPositionCard_ProofRequested" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <ItemsControl x:Name="PositionCardsItems" Grid.Row="0" Grid.Column="0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:AssetPositionCard ProofRequested="AssetPositionCard_ProofRequested" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <Border Grid.Row="0" Grid.Column="2" x:Name="AssetXrayPanel" Background="#090F1B" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="16">
                     <StackPanel>

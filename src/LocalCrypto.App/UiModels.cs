@@ -13,6 +13,16 @@ public sealed record DashboardMetrics(
     string ConfidenceHint,
     string ConfidenceTone);
 
+public sealed record DashboardSourceSummary(
+    string BinanceState,
+    string BinanceHint,
+    string BinanceValue,
+    string BinanceAssets,
+    string ReconciliationState,
+    string ReconciliationHint,
+    string OpenOrders,
+    string CacheState);
+
 public sealed record PositionCardRow(
     string Symbol,
     string AssetName,

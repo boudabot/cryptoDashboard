@@ -67,7 +67,10 @@ public static class UiFormatting
             "USDC" => "#2775CA",
             "USDT" => "#26A17B",
             "SOL" => "#14F195",
+            "OP" => "#FF0420",
             "OPN" or "OPG" => "#FF5A1F",
+            "RAVE" => "#A855F7",
+            "GENIUS" => "#38BDF8",
             "EUR" => "#F0B90B",
             _ => "#38BDF8"
         };
@@ -80,6 +83,10 @@ public static class UiFormatting
             "USDC" => "USD Coin",
             "USDT" => "Tether USD",
             "SOL" => "Solana",
+            "OP" => "Optimism",
+            "OPG" => "OpenGPU",
+            "RAVE" => "Rave",
+            "GENIUS" => "Genius",
             "EUR" => "Euro cash",
             _ => "Actif Binance"
         };

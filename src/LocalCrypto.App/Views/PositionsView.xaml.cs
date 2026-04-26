@@ -80,7 +80,6 @@ public partial class PositionsView : UserControl
         Grid.SetColumn(AssetXrayPanel, compact ? 0 : 2);
         Grid.SetColumnSpan(AssetXrayPanel, compact ? 3 : 1);
         AssetXrayPanel.Margin = compact ? new Thickness(0, 14, 0, 0) : new Thickness(0);
-        PositionListHost.MaxHeight = compact ? double.PositiveInfinity : 430;
     }
 
     private void AssetPositionCard_ProofRequested(object? sender, string symbol)

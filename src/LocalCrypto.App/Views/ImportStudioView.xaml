@@ -10,7 +10,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TabItem}">
-                        <Border x:Name="TabBorder" Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="6,6,0,0" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="TabBorder"
+                                Background="#111827"
+                                BorderBrush="#263244"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="{TemplateBinding Padding}"
+                                TextElement.Foreground="{TemplateBinding Foreground}">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -27,6 +33,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="SegmentButton" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#111827" />
+            <Setter Property="Foreground" Value="#CBD5E1" />
+            <Setter Property="BorderBrush" Value="#263A55" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="MinHeight" Value="32" />
+        </Style>
     </UserControl.Resources>
 
     <Border x:Name="RootAnchor" Background="{StaticResource Brush.Card}" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="22" Margin="0,0,0,14" Effect="{StaticResource Effect.PanelGlow}">
@@ -37,23 +51,23 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="Import Studio" Foreground="White" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="Preview Binance non validee: rien ici n'est verite portefeuille tant que tu ne valides pas dans SQLite." Foreground="#94A3B8" Margin="0,4,0,0" />
+                    <TextBlock Text="Import Studio fichiers" Foreground="White" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Outil CSV/XLSX: preview, audit et reconstruction. Pour Spot/Earn live, utilise Actifs ou Binance API." Foreground="#94A3B8" Margin="0,4,0,0" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                     <Button Content="Ajouter export" Click="AddExport_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
                     <Button Content="Valider trades" Click="ValidateTrades_Click" Background="#22C55E" Foreground="#07111F" BorderBrush="#22C55E" FontWeight="SemiBold" Padding="14,10" Margin="0,0,10,0" />
                     <Button Content="Reinitialiser" Click="Reset_Click" Background="#1F2937" Foreground="White" BorderBrush="#334155" Padding="14,10" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
 
             <UniformGrid x:Name="ImportMetricsGrid" Columns="6" Margin="0,0,0,16">
-                <controls:MetricCard x:Name="ImportVolumeCard" Label="Volume preview" />
+                <controls:MetricCard x:Name="ImportVolumeCard" Label="Volume fichier" />
                 <controls:MetricCard x:Name="ImportEventCountCard" Label="Evenements" />
                 <controls:MetricCard x:Name="ImportTradeCountCard" Label="Trades" ValueBrush="#22C55E" />
                 <controls:MetricCard x:Name="ImportPendingCountCard" Label="A confirmer" ValueBrush="#FBBF24" />
                 <controls:MetricCard x:Name="ImportAssetCountCard" Label="Actifs" ValueBrush="#38BDF8" />
-                <controls:MetricCard x:Name="ImportQuarantineCountCard" Label="Quarantaine" ValueBrush="#F97316" />
+                <controls:MetricCard x:Name="ImportQuarantineCountCard" Label="Doublons ignores" ValueBrush="#F97316" />
             </UniformGrid>
 
             <Border Background="#0B1220" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
@@ -93,27 +107,27 @@
                 <StackPanel>
                     <TextBlock Text="Types" Foreground="#CBD5E1" FontWeight="SemiBold" />
                     <WrapPanel Margin="0,6,0,0">
-                        <Button Content="Tous" Tag="All" Click="TypeFilter_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Trades" Tag="Trades" Click="TypeFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Earn/Rewards" Tag="Rewards" Click="TypeFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Transferts" Tag="Transfers" Click="TypeFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Autres" Tag="Other" Click="TypeFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" />
+                        <Button x:Name="TypeAllButton" Content="Tous" Tag="All" Click="TypeFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="TypeTradesButton" Content="Trades" Tag="Trades" Click="TypeFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="TypeRewardsButton" Content="Rewards fichier" Tag="Rewards" Click="TypeFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="TypeTransfersButton" Content="Transferts" Tag="Transfers" Click="TypeFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="TypeOtherButton" Content="Autres" Tag="Other" Click="TypeFilter_Click" Style="{StaticResource SegmentButton}" />
                     </WrapPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Statuts" Foreground="#CBD5E1" FontWeight="SemiBold" />
                     <WrapPanel Margin="0,6,0,0">
-                        <Button Content="Tous" Tag="All" Click="StatusFilter_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Nouveaux" Tag="New" Click="StatusFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Doublons" Tag="Duplicates" Click="StatusFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="A confirmer" Tag="Pending" Click="StatusFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="Ignores" Tag="Ignored" Click="StatusFilter_Click" Background="#182235" Foreground="#E5E7EB" BorderBrush="#334155" Padding="12,6" />
+                        <Button x:Name="StatusAllButton" Content="Tous" Tag="All" Click="StatusFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="StatusNewButton" Content="Nouveaux" Tag="New" Click="StatusFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="StatusDuplicatesButton" Content="Doublons" Tag="Duplicates" Click="StatusFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="StatusPendingButton" Content="A confirmer" Tag="Pending" Click="StatusFilter_Click" Style="{StaticResource SegmentButton}" />
+                        <Button x:Name="StatusIgnoredButton" Content="Ignores" Tag="Ignored" Click="StatusFilter_Click" Style="{StaticResource SegmentButton}" />
                     </WrapPanel>
                 </StackPanel>
             </Grid>
 
             <TabControl x:Name="ImportTabs" Background="#0B101B" BorderBrush="#263244" Foreground="#E5E7EB">
-                <TabItem x:Name="ImportSummaryTab" Header="Resume">
+                <TabItem x:Name="ImportSummaryTab" Header="Resume fichier">
                     <Grid Background="#0B101B" Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.1*" />
@@ -121,7 +135,7 @@
                         </Grid.ColumnDefinitions>
                         <Border Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="Repartition preview" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBlock Text="Repartition du fichier" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
                                 <ItemsControl x:Name="ImportChartItems" />
                             </StackPanel>
                         </Border>
@@ -133,10 +147,10 @@
                         </Border>
                     </Grid>
                 </TabItem>
-                <TabItem x:Name="ImportAssetsTab" Header="Actifs">
+                <TabItem x:Name="ImportAssetsTab" Header="Actifs importes">
                     <ItemsControl x:Name="ImportAssetItems" Background="#0B101B" Margin="0,12,0,0" />
                 </TabItem>
-                <TabItem x:Name="ImportOrdersTab" Header="Ordres">
+                <TabItem x:Name="ImportOrdersTab" Header="Ordres fichier">
                     <DataGrid x:Name="ImportPreviewGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="260"
                               Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
                               BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column" Margin="0,12,0,0">
@@ -156,7 +170,7 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>
-                <TabItem x:Name="ImportQuarantineTab" Header="Quarantaine">
+                <TabItem x:Name="ImportQuarantineTab" Header="Doublons / ignores">
                     <DataGrid x:Name="QuarantineGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="220"
                               Background="#0F172A" Foreground="#E2E8F0" RowBackground="#111827" AlternatingRowBackground="#172033"
                               BorderBrush="#334155" GridLinesVisibility="None" HeadersVisibility="Column" Margin="0,12,0,0">

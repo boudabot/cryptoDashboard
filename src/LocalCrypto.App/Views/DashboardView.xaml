@@ -9,26 +9,48 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="Portefeuille valide SQLite" FontSize="30" FontWeight="SemiBold" Foreground="White" />
-                <TextBlock Text="Ces chiffres viennent uniquement du ledger local. Les imports non valides restent separes." Foreground="#8FA1BD" Margin="0,4,0,0" />
+                <TextBlock Text="Tableau de bord" FontSize="30" FontWeight="SemiBold" Foreground="White" />
+                <TextBlock Text="Resume concret des sources: ledger valide, derniere observation Binance, ecarts et cache marche." Foreground="#8FA1BD" Margin="0,4,0,0" />
             </StackPanel>
-            <Border Grid.Column="1" Background="{StaticResource Brush.Card}" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" />
-                    <TextBlock Text="SQLite actif" Foreground="#CBD5E1" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
+            <Button Grid.Column="1" Content="Rafraichir Binance" Click="RefreshBinance_Click" Background="#22C55E" Foreground="#07111F" BorderBrush="#22C55E" Padding="14,9" VerticalAlignment="Center" />
         </Grid>
 
         <Border Background="#0B1220" BorderBrush="#1E2B41" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,14">
             <UniformGrid x:Name="DashboardMetricsGrid" Columns="6">
-            <controls:MetricCard x:Name="AssetCountCard" Label="Actifs suivis" />
-            <controls:MetricCard x:Name="TransactionCountCard" Label="Transactions" />
-            <controls:MetricCard x:Name="TrackedCostCard" Label="Cout suivi" />
-            <controls:MetricCard x:Name="RealizedPnlCard" Label="PnL realise" ValueBrush="#22C55E" />
-            <controls:MetricCard x:Name="FeesCard" Label="Frais suivis" />
-            <controls:MetricCard x:Name="ConfidenceCard" Label="Confiance" ValueBrush="#FBBF24" />
+                <controls:MetricCard x:Name="AssetCountCard" Label="Actifs ledger" />
+                <controls:MetricCard x:Name="TransactionCountCard" Label="Transactions SQLite" />
+                <controls:MetricCard x:Name="TrackedCostCard" Label="Cout ledger" />
+                <controls:MetricCard x:Name="RealizedPnlCard" Label="PnL realise" ValueBrush="#22C55E" />
+                <controls:MetricCard x:Name="FeesCard" Label="Frais ledger" />
+                <controls:MetricCard x:Name="ConfidenceCard" Label="Etat ledger" ValueBrush="#FBBF24" />
             </UniformGrid>
+        </Border>
+
+        <Border Background="{StaticResource Brush.Card}" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="16" Effect="{StaticResource Effect.PanelGlow}">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Source Binance observable" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="Dernier snapshot lu via API read-only ou cache local. Ce n'est pas la verite ledger." Foreground="#8FA1BD" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#0B1220" BorderBrush="#2A3E5E" BorderThickness="1" CornerRadius="14" Padding="11,6" VerticalAlignment="Center">
+                        <TextBlock x:Name="BinanceStateText" Text="Non connecte" Foreground="#FBBF24" FontWeight="SemiBold" />
+                    </Border>
+                </Grid>
+
+                <UniformGrid x:Name="SourceMetricsGrid" Columns="4">
+                    <controls:MetricCard x:Name="BinanceValueCard" Label="Valeur Binance" ValueBrush="#38BDF8" />
+                    <controls:MetricCard x:Name="BinanceAssetsCard" Label="Actifs Binance" ValueBrush="#F0B90B" />
+                    <controls:MetricCard x:Name="ReconciliationCard" Label="Ecarts" ValueBrush="#FBBF24" />
+                    <controls:MetricCard x:Name="OpenOrdersCard" Label="Ordres ouverts" ValueBrush="#38BDF8" />
+                </UniformGrid>
+
+                <TextBlock x:Name="DashboardHintText" Foreground="#8FA1BD" TextWrapping="Wrap" Margin="0,4,0,0" />
+            </StackPanel>
         </Border>
     </StackPanel>
 </UserControl>

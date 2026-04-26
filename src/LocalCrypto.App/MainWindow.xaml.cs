@@ -36,6 +36,7 @@ public partial class MainWindow : Window
         InitializeBinanceApiView();
         RefreshImportDashboard();
         RefreshPortfolio();
+        RefreshBinanceCacheViews();
         ShowPage("Dashboard", DashboardNavButton);
         UpdateResponsiveLayout();
     }
@@ -77,7 +78,12 @@ public partial class MainWindow : Window
     private void ShowPage(string target, Button? activeButton = null)
     {
         DashboardView.Visibility = target == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
+        AssetsOverviewView.Visibility = target == "AssetsOverview" ? Visibility.Visible : Visibility.Collapsed;
         PositionsView.Visibility = target == "Positions" ? Visibility.Visible : Visibility.Collapsed;
+        EarnView.Visibility = target == "Earn" ? Visibility.Visible : Visibility.Collapsed;
+        AlphaView.Visibility = target == "Alpha" ? Visibility.Visible : Visibility.Collapsed;
+        OpenOrdersView.Visibility = target == "OpenOrders" ? Visibility.Visible : Visibility.Collapsed;
+        ReconciliationView.Visibility = target == "Reconciliation" ? Visibility.Visible : Visibility.Collapsed;
         BinanceApiView.Visibility = target == "BinanceApi" ? Visibility.Visible : Visibility.Collapsed;
         ImportStudioView.Visibility = target == "Imports" ? Visibility.Visible : Visibility.Collapsed;
         DataView.Visibility = target == "Data" ? Visibility.Visible : Visibility.Collapsed;
@@ -89,7 +95,12 @@ public partial class MainWindow : Window
     private Button DefaultButtonFor(string target) => target switch
     {
         "Dashboard" => DashboardNavButton,
+        "AssetsOverview" => AssetsOverviewNavButton,
         "Positions" => SpotNavButton,
+        "Earn" => EarnNavButton,
+        "Alpha" => AlphaNavButton,
+        "OpenOrders" => OpenOrdersNavButton,
+        "Reconciliation" => ReconciliationNavButton,
         "BinanceApi" => BinanceApiNavButton,
         "Imports" => ImportNavButton,
         "Data" => DataNavButton,
@@ -105,7 +116,9 @@ public partial class MainWindow : Window
             SpotNavButton,
             EarnNavButton,
             AlphaNavButton,
+            ReconciliationNavButton,
             BinanceApiNavButton,
+            OpenOrdersNavButton,
             ImportNavButton,
             LedgerNavButton,
             DataNavButton
@@ -130,9 +143,11 @@ public partial class MainWindow : Window
     {
         var compact = ActualWidth < 1380;
         DashboardView.SetCompactMode(compact);
+        AssetsOverviewView.SetCompactMode(compact);
         PositionsView.SetCompactMode(compact);
         BinanceApiView.SetCompactMode(compact);
         ImportStudioView.SetCompactMode(compact);
+        ReconciliationView.SetCompactMode(compact);
     }
 
     private void InitializeBinanceApiView()
@@ -190,6 +205,11 @@ public partial class MainWindow : Window
     private async void BinanceApiView_RefreshSpotRequested(object? sender, EventArgs e)
     {
         await RefreshBinanceSpotAsync("Synchronisation Binance: Spot, Earn, ordres, prix et graphes...");
+    }
+
+    private async void DashboardView_RefreshBinanceRequested(object? sender, EventArgs e)
+    {
+        await RefreshBinanceSpotAsync("Synchronisation Binance depuis le tableau de bord...");
     }
 
     private void BinanceApiView_ClearCredentialsRequested(object? sender, EventArgs e)
@@ -265,6 +285,13 @@ public partial class MainWindow : Window
                 syncedAt,
                 klines.Count,
                 $"Source Binance lue: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s) ouvert(s), {pricedRows} prix, {klines.Count} bougie(s) cachees, {ignoredMirrors} miroir(s) LD ignores du total. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
+            EarnView.SetRows(rows);
+            OpenOrdersView.SetOrders(BinanceApiUiBuilder.BuildOpenOrderRows(openOrders));
+            ReconciliationView.SetRows(BinanceApiUiBuilder.BuildComparisonRows(comparisons), syncedAt);
+            AssetsOverviewView.SetBinanceObservation(
+                true,
+                $"{snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s), synchro {syncedAt.ToLocalTime():dd/MM HH:mm}.");
+            SetDashboardSourceSummary(latestSnapshot, comparisons);
         }
         catch (Exception exception)
         {
@@ -466,7 +493,7 @@ public partial class MainWindow : Window
                 ? "Aucun nouveau fichier ajoute."
                 : emptyExports > 0 && addedEvents == 0
                     ? $"{addedFiles} fichier(s) ajoute(s), export vide detecte, rien a importer. Aucune ecriture SQLite."
-                    : $"{addedFiles} fichier(s) ajoute(s), {addedEvents} evenement(s) conserves, {duplicateEvents} doublon(s) probables en quarantaine. Aucune ecriture SQLite.";
+                    : $"{addedFiles} fichier(s) ajoute(s), {addedEvents} evenement(s) conserves, {duplicateEvents} doublon(s) probable(s) ignores. Aucune ecriture SQLite.";
             ImportStudioView.SetFeedback(feedback);
             RefreshImportDashboard();
         }
@@ -528,7 +555,7 @@ public partial class MainWindow : Window
             }
         }
 
-        ImportStudioView.SetFeedback($"{written} trade(s) ecrit(s), {duplicates} doublon(s) deja presents, {blocked} evenement(s) gardes en preview/quarantaine.");
+        ImportStudioView.SetFeedback($"{written} trade(s) ecrit(s), {duplicates} doublon(s) deja presents, {blocked} evenement(s) gardes en preview fichier.");
         RefreshPortfolio();
     }
 
@@ -587,6 +614,8 @@ public partial class MainWindow : Window
         var portfolio = PortfolioCalculator.Calculate(transactions);
 
         DashboardView.SetMetrics(PortfolioUiBuilder.BuildDashboardMetrics(portfolio, transactions));
+        AssetsOverviewView.SetLedgerMetrics(PortfolioUiBuilder.BuildDashboardMetrics(portfolio, transactions));
+        RefreshBinanceCacheViews();
         UpdateDataConfidence(portfolio, transactions);
 
         var positionRows = portfolio.Positions
@@ -758,7 +787,65 @@ public partial class MainWindow : Window
         var deleted = _binanceSnapshotStore.PurgeCache();
         DataView.SetFeedback($"{deleted} ligne(s) de cache Binance supprimee(s). Le ledger SQLite reste intact.");
         BinanceApiView.SetInitialState(_binanceCredentialStore.Load() is not null, "Cache Binance purge. Rafraichis Binance pour recreer des snapshots live.");
+        EarnView.SetRows([]);
+        OpenOrdersView.SetOrders([]);
+        ReconciliationView.SetRows([], null);
+        AssetsOverviewView.SetBinanceObservation(false, "Cache Binance purge. Rafraichis Binance pour observer la source.");
+        DashboardView.SetSourceSummary(EmptyDashboardSourceSummary("Cache Binance purge. Rafraichis Binance pour observer la source."));
     }
+
+    private void RefreshBinanceCacheViews()
+    {
+        var latestSnapshot = _binanceSnapshotStore.LoadLatestSnapshot();
+        var portfolio = PortfolioCalculator.Calculate(_store.ListTransactions());
+        var comparisons = BinanceLedgerReconciler.Compare(portfolio, latestSnapshot);
+        var rows = latestSnapshot is null ? [] : BinanceApiUiBuilder.ToLiveRows(latestSnapshot.Assets);
+        EarnView.SetRows(rows);
+        OpenOrdersView.SetOrders(latestSnapshot is null ? [] : BinanceApiUiBuilder.BuildOpenOrderRows(latestSnapshot.OpenOrders));
+        ReconciliationView.SetRows(BinanceApiUiBuilder.BuildComparisonRows(comparisons), latestSnapshot?.SyncedAt);
+        SetDashboardSourceSummary(latestSnapshot, comparisons);
+        AssetsOverviewView.SetBinanceObservation(
+            latestSnapshot is not null,
+            latestSnapshot is null
+                ? "Aucun snapshot Binance en cache."
+                : $"{latestSnapshot.Assets.Count} ligne(s), {latestSnapshot.OpenOrders.Count} ordre(s), cache {latestSnapshot.SyncedAt.ToLocalTime():dd/MM HH:mm}.");
+    }
+
+    private void SetDashboardSourceSummary(
+        BinanceLatestSnapshot? latestSnapshot,
+        IReadOnlyList<BinanceLedgerComparison> comparisons)
+    {
+        if (latestSnapshot is null)
+        {
+            DashboardView.SetSourceSummary(EmptyDashboardSourceSummary("Aucun snapshot Binance en cache. Clique Rafraichir Binance pour lire la source observable."));
+            return;
+        }
+
+        var consolidated = BinanceSourceConsolidator.Consolidate(latestSnapshot.Assets);
+        var approximateValue = consolidated.Sum(row => row.ValueUsdt ?? 0m);
+        var assets = consolidated.Select(row => row.UnderlyingAsset).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var issues = comparisons.Count(row => row.Status != "OK");
+        DashboardView.SetSourceSummary(new DashboardSourceSummary(
+            "Cache Binance",
+            $"Snapshot {latestSnapshot.SyncedAt.ToLocalTime():dd/MM HH:mm}.",
+            approximateValue > 0m ? $"{UiFormatting.FormatNumber(approximateValue)} USDT" : "Non consolide",
+            assets.ToString(UiFormatting.FrenchCulture),
+            issues == 0 ? "OK" : issues.ToString(UiFormatting.FrenchCulture),
+            issues == 0 ? "Ledger et Binance alignes sur les quantites observees." : "Actif(s) a rapprocher.",
+            latestSnapshot.OpenOrders.Count.ToString(UiFormatting.FrenchCulture),
+            "Donnees indicatives issues du cache Binance local. Rafraichir pour relire l'API."));
+    }
+
+    private static DashboardSourceSummary EmptyDashboardSourceSummary(string hint) =>
+        new(
+            "Non connecte",
+            hint,
+            "-",
+            "-",
+            "-",
+            "Pas encore de comparaison ledger/source.",
+            "-",
+            hint);
 
     private void UpdateDataConfidence(PortfolioSnapshot portfolio, IReadOnlyList<LedgerTransaction> transactions)
     {

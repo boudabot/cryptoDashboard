@@ -1,11 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="Color.AppBg" Color="#060A12" />
-    <SolidColorBrush x:Key="Color.Surface" Color="#0D1422" />
-    <SolidColorBrush x:Key="Color.SurfaceRaised" Color="#111B2D" />
-    <SolidColorBrush x:Key="Color.SurfaceSoft" Color="#162238" />
-    <SolidColorBrush x:Key="Color.Border" Color="#24324A" />
-    <SolidColorBrush x:Key="Color.BorderBright" Color="#385071" />
+    <SolidColorBrush x:Key="Color.Surface" Color="#0B1220" />
+    <SolidColorBrush x:Key="Color.SurfaceRaised" Color="#101A2B" />
+    <SolidColorBrush x:Key="Color.SurfaceSoft" Color="#16243A" />
+    <SolidColorBrush x:Key="Color.Border" Color="#2A3A55" />
+    <SolidColorBrush x:Key="Color.BorderBright" Color="#48668D" />
     <SolidColorBrush x:Key="Color.Text" Color="#F4F7FB" />
     <SolidColorBrush x:Key="Color.Muted" Color="#92A1B9" />
     <SolidColorBrush x:Key="Color.Subtle" Color="#5F708B" />
@@ -26,8 +26,9 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Brush.Card" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#111B2D" Offset="0" />
-        <GradientStop Color="#0D1422" Offset="1" />
+        <GradientStop Color="#121D31" Offset="0" />
+        <GradientStop Color="#0B1220" Offset="0.68" />
+        <GradientStop Color="#090F1B" Offset="1" />
     </LinearGradientBrush>
 
     <DropShadowEffect x:Key="Effect.PanelGlow" Color="#1E90FF" BlurRadius="22" ShadowDepth="0" Opacity="0.16" />

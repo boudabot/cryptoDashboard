@@ -59,13 +59,14 @@
                         </Grid>
                     </Button>
                     <StackPanel x:Name="AssetsMenu">
-                        <Button x:Name="AssetsOverviewNavButton" Content="Apercu ledger" Tag="Dashboard" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="AssetsOverviewNavButton" Content="Vue globale" Tag="AssetsOverview" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                         <Button x:Name="SpotNavButton" Content="Spot / Positions" Tag="Positions" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
-                        <Button x:Name="EarnNavButton" Content="Earn / Rewards" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
-                        <Button x:Name="AlphaNavButton" Content="Alpha" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="EarnNavButton" Content="Earn / Rewards" Tag="Earn" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="AlphaNavButton" Content="Alpha" Tag="Alpha" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
+                        <Button x:Name="ReconciliationNavButton" Content="Ecarts / Reconciliation" Tag="Reconciliation" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                     </StackPanel>
 
-                    <Button x:Name="BinanceApiNavButton" Content="Binance API" Tag="BinanceApi" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Margin="0,16,0,6" />
+                    <Button x:Name="BinanceApiNavButton" Content="Binance API / Compte" Tag="BinanceApi" Click="NavigateSection_Click" Style="{StaticResource NavButton}" Margin="0,16,0,6" />
 
                     <Button x:Name="OrdersGroupButton" Click="ToggleNavGroup_Click" Tag="Orders" Style="{StaticResource NavGroupButton}">
                         <Grid>
@@ -78,6 +79,7 @@
                         </Grid>
                     </Button>
                     <StackPanel x:Name="OrdersMenu" Visibility="Collapsed">
+                        <Button x:Name="OpenOrdersNavButton" Content="Ordres ouverts" Tag="OpenOrders" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                         <Button x:Name="ImportNavButton" Content="Import Studio" Tag="Imports" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                         <Button x:Name="LedgerNavButton" Content="Journal ledger" Tag="Data" Click="NavigateSection_Click" Style="{StaticResource NavSubButton}" />
                     </StackPanel>
@@ -98,8 +100,13 @@
 
         <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto" Background="{StaticResource Brush.AppBackground}">
             <Grid Margin="24">
-                <views:DashboardView x:Name="DashboardView" />
+                <views:DashboardView x:Name="DashboardView" RefreshBinanceRequested="DashboardView_RefreshBinanceRequested" />
+                <views:AssetsOverviewView x:Name="AssetsOverviewView" Visibility="Collapsed" />
                 <views:PositionsView x:Name="PositionsView" Visibility="Collapsed" AssetProofRequested="PositionsView_AssetProofRequested" />
+                <views:EarnView x:Name="EarnView" Visibility="Collapsed" />
+                <views:AlphaView x:Name="AlphaView" Visibility="Collapsed" />
+                <views:OpenOrdersView x:Name="OpenOrdersView" Visibility="Collapsed" />
+                <views:ReconciliationView x:Name="ReconciliationView" Visibility="Collapsed" />
                 <views:BinanceApiView x:Name="BinanceApiView"
                                       Visibility="Collapsed"
                                       SaveCredentialsRequested="BinanceApiView_SaveCredentialsRequested"

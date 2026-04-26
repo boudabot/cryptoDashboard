@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace LocalCrypto.App.Views;
 
@@ -17,6 +18,7 @@ public partial class ImportStudioView : UserControl
         ImportChartItems.ItemTemplate = ChartTemplate();
         ImportRecentOrdersItems.ItemTemplate = RecentOrderTemplate();
         ImportAssetItems.ItemTemplate = ImportAssetTemplate();
+        UpdateFilterVisuals();
     }
 
     public string AssetFilter => AssetFilterBox.Text.Trim().ToUpperInvariant();
@@ -84,6 +86,7 @@ public partial class ImportStudioView : UserControl
         if (sender is Button button && button.Tag is string filter)
         {
             TypeFilter = filter;
+            UpdateFilterVisuals();
             FiltersChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -98,6 +101,7 @@ public partial class ImportStudioView : UserControl
                 SelectQuarantine();
             }
 
+            UpdateFilterVisuals();
             FiltersChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -107,8 +111,40 @@ public partial class ImportStudioView : UserControl
         AssetFilterBox.Text = asset == "*" ? string.Empty : asset;
         TypeFilter = "Trades";
         SelectOrders();
+        UpdateFilterVisuals();
         FiltersChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private void UpdateFilterVisuals()
+    {
+        UpdateSegmentGroup(
+            TypeFilter,
+            TypeAllButton,
+            TypeTradesButton,
+            TypeRewardsButton,
+            TypeTransfersButton,
+            TypeOtherButton);
+        UpdateSegmentGroup(
+            StatusFilter,
+            StatusAllButton,
+            StatusNewButton,
+            StatusDuplicatesButton,
+            StatusPendingButton,
+            StatusIgnoredButton);
+    }
+
+    private static void UpdateSegmentGroup(string selected, params Button[] buttons)
+    {
+        foreach (var button in buttons)
+        {
+            var active = button.Tag is string tag && tag == selected;
+            button.Background = Brush(active ? "#F0B90B" : "#111827");
+            button.Foreground = Brush(active ? "#111827" : "#CBD5E1");
+            button.BorderBrush = Brush(active ? "#F0B90B" : "#263A55");
+        }
+    }
+
+    private static Brush Brush(string color) => (Brush)new BrushConverter().ConvertFromString(color)!;
 
     private static DataTemplate ChartTemplate()
     {
@@ -134,16 +170,15 @@ public partial class ImportStudioView : UserControl
     private static DataTemplate RecentOrderTemplate()
     {
         const string xaml = """
-            <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+            <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                          xmlns:controls="clr-namespace:LocalCrypto.App.Controls;assembly=localCrypto">
                 <Grid Margin="0,6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="42" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="15" Background="{Binding Accent}">
-                        <TextBlock Text="{Binding Logo}" Foreground="#0B101B" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <controls:AssetLogo Symbol="{Binding Logo}" Initials="{Binding Logo}" Accent="{Binding Accent}" Diameter="30" InitialFontSize="9" />
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding Subtitle}" Foreground="#94A3B8" />
@@ -158,8 +193,9 @@ public partial class ImportStudioView : UserControl
     private static DataTemplate ImportAssetTemplate()
     {
         const string xaml = """
-            <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                <Border Background="#111827" BorderBrush="#263244" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,8">
+            <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                          xmlns:controls="clr-namespace:LocalCrypto.App.Controls;assembly=localCrypto">
+                <Border Background="#111827" BorderBrush="#2A3E5E" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="52" />
@@ -169,9 +205,7 @@ public partial class ImportStudioView : UserControl
                             <ColumnDefinition Width="130" />
                             <ColumnDefinition Width="160" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="36" Height="36" CornerRadius="18" Background="{Binding Accent}">
-                            <TextBlock Text="{Binding Logo}" Foreground="#0B101B" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        <controls:AssetLogo Symbol="{Binding Asset}" Initials="{Binding Logo}" Accent="{Binding Accent}" Diameter="38" InitialFontSize="10" />
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="{Binding Asset}" Foreground="White" FontSize="16" FontWeight="SemiBold" />
                             <TextBlock Text="{Binding Description}" Foreground="#94A3B8" />

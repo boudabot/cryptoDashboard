@@ -88,6 +88,13 @@ public partial class BinanceApiView : UserControl
 
         _compactMode = compact;
         BinanceMetricsGrid.Columns = compact ? 2 : 4;
+        CredentialGapColumn.Width = compact ? new GridLength(12) : new GridLength(18);
+        CredentialActionColumn.Width = compact ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+
+        Grid.SetRow(CredentialActionPanel, compact ? 1 : 0);
+        Grid.SetColumn(CredentialActionPanel, compact ? 0 : 3);
+        Grid.SetColumnSpan(CredentialActionPanel, compact ? 4 : 1);
+        CredentialActionPanel.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(18, 0, 0, 0);
     }
 
     private void SetCoverage(

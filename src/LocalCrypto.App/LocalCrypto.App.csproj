@@ -5,6 +5,10 @@
     <ProjectReference Include="..\LocalCrypto.Data\LocalCrypto.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Assets\CryptoIcons\**\*.png" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>

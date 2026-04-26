@@ -1,0 +1,39 @@
+<UserControl x:Class="LocalCrypto.App.Views.OpenOrdersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LocalCrypto.App.Controls">
+    <StackPanel x:Name="RootAnchor">
+        <Grid Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Ordres ouverts Binance" FontSize="30" FontWeight="SemiBold" Foreground="White" />
+                <TextBlock Text="Observation read-only des ordres ouverts. localCrypto ne place, ne modifie et n'annule aucun ordre." Foreground="#8FA1BD" Margin="0,4,0,0" />
+            </StackPanel>
+        </Grid>
+
+        <UniformGrid Columns="3" Margin="0,0,0,16">
+            <controls:MetricCard x:Name="OpenOrdersCountCard" Label="Ordres ouverts" ValueBrush="#F0B90B" />
+            <controls:MetricCard x:Name="OpenOrdersAssetsCard" Label="Symboles" ValueBrush="#38BDF8" />
+            <controls:MetricCard Label="Source" Value="Binance live" Hint="Cache indicatif, pas ledger." ValueBrush="#22C55E" />
+        </UniformGrid>
+
+        <Border Background="{StaticResource Brush.Card}" BorderBrush="#263A55" BorderThickness="1" CornerRadius="8" Padding="18" Effect="{StaticResource Effect.PanelGlow}">
+            <StackPanel>
+                <TextBlock Text="Carnet des ordres ouverts observes" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="Cette vue sert a separer les ordres live de l'Import Studio fichiers." Foreground="#8FA1BD" Margin="0,4,0,12" />
+                <TextBlock x:Name="OpenOrdersEmptyText" Text="Aucun ordre ouvert charge. Rafraichis Binance API / Compte pour observer la source." Foreground="#64748B" Margin="0,0,0,10" TextWrapping="Wrap" />
+                <DataGrid x:Name="OpenOrdersGrid" AutoGenerateColumns="False" IsReadOnly="True" MinHeight="260">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Symbole" Binding="{Binding Symbol}" Width="*" />
+                        <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="90" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="110" />
+                        <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="110" />
+                        <DataGridTextColumn Header="Prix" Binding="{Binding Price}" Width="*" />
+                        <DataGridTextColumn Header="Quantite" Binding="{Binding Quantity}" Width="*" />
+                        <DataGridTextColumn Header="Execute" Binding="{Binding Executed}" Width="*" />
+                        <DataGridTextColumn Header="Maj" Binding="{Binding UpdatedAt}" Width="120" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
