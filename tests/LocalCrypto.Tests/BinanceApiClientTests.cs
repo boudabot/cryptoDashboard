@@ -65,6 +65,75 @@ public sealed class BinanceApiClientTests
     }
 
     [Fact]
+    public async Task GetApiRestrictionsReadsDangerousPermissions()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = Json("""
+            {
+              "ipRestrict": false,
+              "createTime": 1698645219000,
+              "enableReading": true,
+              "enableWithdrawals": false,
+              "enableInternalTransfer": false,
+              "enableMargin": false,
+              "enableFutures": false,
+              "permitsUniversalTransfer": false,
+              "enableVanillaOptions": false,
+              "enableFixApiTrade": false,
+              "enableFixReadOnly": true,
+              "enableSpotAndMarginTrading": true,
+              "enablePortfolioMarginTrading": false
+            }
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var restrictions = await client.GetApiRestrictionsAsync(new BinanceApiCredentials("api-key", "secret"));
+
+        Assert.False(restrictions.IsStrictReadOnly);
+        Assert.Contains("trading spot/margin", restrictions.DangerousPermissions);
+    }
+
+    [Fact]
+    public async Task GetApiRestrictionsAcceptsReadingOnlyKey()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = Json("""
+            {
+              "ipRestrict": true,
+              "createTime": 1698645219000,
+              "enableReading": true,
+              "enableWithdrawals": false,
+              "enableInternalTransfer": false,
+              "enableMargin": false,
+              "enableFutures": false,
+              "permitsUniversalTransfer": false,
+              "enableVanillaOptions": false,
+              "enableFixApiTrade": false,
+              "enableFixReadOnly": true,
+              "enableSpotAndMarginTrading": false,
+              "enablePortfolioMarginTrading": false
+            }
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var restrictions = await client.GetApiRestrictionsAsync(new BinanceApiCredentials("api-key", "secret"));
+
+        Assert.True(restrictions.IsStrictReadOnly);
+        Assert.True(restrictions.IpRestrict);
+        Assert.Empty(restrictions.DangerousPermissions);
+    }
+
+    [Fact]
     public void BuildSignedQueryUsesHmacSha256()
     {
         var query = BinanceApiClient.BuildSignedQuery(

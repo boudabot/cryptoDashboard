@@ -27,4 +27,16 @@ public sealed class SensitiveTextSanitizerTests
         Assert.True(sanitized.Length <= 35);
         Assert.EndsWith("...", sanitized, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void SanitizeMasksKnownValuesEvenWithoutLabels()
+    {
+        var sanitized = SensitiveTextSanitizer.Sanitize(
+            "Binance refused PUBLIC-KEY and PRIVATE-SECRET in an unexpected response.",
+            ["PUBLIC-KEY", "PRIVATE-SECRET"]);
+
+        Assert.DoesNotContain("PUBLIC-KEY", sanitized, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE-SECRET", sanitized, StringComparison.Ordinal);
+        Assert.Equal("Binance refused <masque> and <masque> in an unexpected response.", sanitized);
+    }
 }

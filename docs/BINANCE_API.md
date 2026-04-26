@@ -46,6 +46,7 @@ Points retenus:
 - les endpoints `USER_DATA`, dont `/api/v3/account`, demandent `X-MBX-APIKEY`, `timestamp`, `recvWindow` et une signature HMAC SHA256
 - `/api/v3/account` donne les balances Spot du compte
 - `/api/v3/ticker/price` donne un prix public par symbole, par exemple `ETHUSDT`
+- `/sapi/v1/account/apiRestrictions` permet de lire les permissions de la cle API courante avant de l'accepter
 
 ## Securite locale
 
@@ -62,6 +63,18 @@ Dans l'app:
 - apres sauvegarde, les champs de saisie sont vides
 - le secret n'est jamais reaffiche
 - les messages d'erreur Binance sont limites et nettoyes avant affichage
+- avant sauvegarde, l'app appelle `/sapi/v1/account/apiRestrictions`
+- la cle est refusee si une permission dangereuse est activee:
+  - retrait
+  - transfert interne
+  - transfert universel
+  - margin
+  - futures
+  - options
+  - FIX trading
+  - spot/margin trading
+  - portfolio margin trading
+- la cle stockee doit avoir `enableReading=true` et les permissions dangereuses a `false`
 
 ## Limites de securite explicites
 
@@ -74,6 +87,8 @@ Regle d'exploitation:
 - creer la cle en lecture seule
 - supprimer la cle cote Binance si elle a ete exposee
 - ne pas demander a un assistant ou a un script de dechiffrer `%APPDATA%\localCrypto\binance-readonly.dat`
+- faire tourner les vraies cles seulement via l'UI de l'app, pas via tests ou scripts de debug
+- utiliser une cle dediee facile a supprimer/renouveler cote Binance
 
 ## Limites connues
 

@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly List<BinanceImportEvent> _binanceImportEvents = [];
     private readonly List<BinanceImportDuplicate> _binanceImportDuplicates = [];
     private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
+    private bool _binanceApiBusy;
     private int _loadedImportSourceRows;
 
     public MainWindow()
@@ -149,17 +150,33 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BinanceApiView_SaveCredentialsRequested(object? sender, BinanceApiCredentials credentials)
+    private async void BinanceApiView_SaveCredentialsRequested(object? sender, BinanceApiCredentials credentials)
     {
         try
         {
+            BinanceApiView.SetSyncRunning("Verification des permissions de la cle Binance...");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var restrictions = await _binanceApiClient.GetApiRestrictionsAsync(credentials, cancellation.Token);
+            if (!restrictions.IsStrictReadOnly)
+            {
+                _binanceCredentialStore.Clear();
+                BinanceApiView.ClearCredentialInputs();
+                BinanceApiView.SetError(ReadOnlyFailureMessage(restrictions));
+                return;
+            }
+
             _binanceCredentialStore.Save(credentials);
             BinanceApiView.ClearCredentialInputs();
-            BinanceApiView.SetInitialState(true, "Cle API enregistree localement et champs effaces. Pour modifier, colle une nouvelle cle et un nouveau secret.");
+            BinanceApiView.SetInitialState(
+                true,
+                restrictions.IpRestrict
+                    ? "Cle lecture seule validee et enregistree. Restriction IP active cote Binance."
+                    : "Cle lecture seule validee et enregistree. Pour plus de securite, ajoute une restriction IP cote Binance.");
         }
         catch (Exception exception)
         {
-            BinanceApiView.SetError(SafeErrorMessage(exception));
+            BinanceApiView.ClearCredentialInputs();
+            BinanceApiView.SetError(SafeErrorMessage(exception, credentials));
         }
     }
 
@@ -182,9 +199,17 @@ public partial class MainWindow : Window
 
     private async Task RefreshBinanceSpotAsync(string runningMessage)
     {
+        if (_binanceApiBusy)
+        {
+            BinanceApiView.SetSyncRunning("Synchronisation Binance deja en cours...");
+            return;
+        }
+
+        _binanceApiBusy = true;
+        BinanceApiCredentials? credentials = null;
         try
         {
-            var credentials = _binanceCredentialStore.Load();
+            credentials = _binanceCredentialStore.Load();
             if (credentials is null)
             {
                 BinanceApiView.SetError("Aucune cle API locale. Enregistre une cle Binance read-only avant la synchro.");
@@ -192,8 +217,16 @@ public partial class MainWindow : Window
             }
 
             BinanceApiView.SetSyncRunning(runningMessage);
-            var snapshot = await _binanceApiClient.GetAccountSnapshotAsync(credentials);
-            var prices = await LoadBinancePricesAsync(snapshot.Balances);
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+            var restrictions = await _binanceApiClient.GetApiRestrictionsAsync(credentials, cancellation.Token);
+            if (!restrictions.IsStrictReadOnly)
+            {
+                BinanceApiView.SetError(ReadOnlyFailureMessage(restrictions));
+                return;
+            }
+
+            var snapshot = await _binanceApiClient.GetAccountSnapshotAsync(credentials, cancellation.Token);
+            var prices = await LoadBinancePricesAsync(snapshot.Balances, cancellation.Token);
             var rows = BinanceApiUiBuilder.BuildRows(snapshot, prices);
             var total = BinanceApiUiBuilder.TotalUsdt(snapshot, prices);
             var pricedRows = rows.Count(row => row.PriceUsdt != "-");
@@ -205,11 +238,17 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            BinanceApiView.SetError(SafeErrorMessage(exception));
+            BinanceApiView.SetError(SafeErrorMessage(exception, credentials));
+        }
+        finally
+        {
+            _binanceApiBusy = false;
         }
     }
 
-    private async Task<IReadOnlyDictionary<string, decimal>> LoadBinancePricesAsync(IReadOnlyList<BinanceAccountBalance> balances)
+    private async Task<IReadOnlyDictionary<string, decimal>> LoadBinancePricesAsync(
+        IReadOnlyList<BinanceAccountBalance> balances,
+        CancellationToken cancellationToken)
     {
         var prices = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         foreach (var balance in balances)
@@ -220,7 +259,7 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            var ticker = await _binanceApiClient.TryGetPriceAsync(symbol);
+            var ticker = await _binanceApiClient.TryGetPriceAsync(symbol, cancellationToken);
             if (ticker is not null)
             {
                 prices[balance.Asset] = ticker.Price;
@@ -230,18 +269,39 @@ public partial class MainWindow : Window
         return prices;
     }
 
-    private static string SafeErrorMessage(Exception exception)
+    private static string SafeErrorMessage(Exception exception, BinanceApiCredentials? credentials = null)
     {
-        return exception switch
+        var message = exception switch
         {
             BinanceApiException binanceApiException => binanceApiException.Message,
             HttpRequestException => "Connexion Binance impossible. Verifie Internet ou les restrictions reseau.",
+            OperationCanceledException => "Connexion Binance interrompue: delai depasse.",
             CryptographicException => "Identifiants Binance locaux illisibles. Efface la cle locale puis reenregistre-la.",
             FormatException => "Fichier d'identifiants Binance local invalide. Efface la cle locale puis reenregistre-la.",
             JsonException => "Reponse Binance ou fichier local illisible.",
             InvalidOperationException invalidOperationException => invalidOperationException.Message,
             _ => "Erreur inattendue dans le module Binance API."
         };
+        return SensitiveTextSanitizer.Sanitize(message, KnownSensitiveValues(credentials));
+    }
+
+    private static IEnumerable<string?> KnownSensitiveValues(BinanceApiCredentials? credentials)
+    {
+        if (credentials is null)
+        {
+            yield break;
+        }
+
+        yield return credentials.ApiKey;
+        yield return credentials.ApiSecret;
+    }
+
+    private static string ReadOnlyFailureMessage(BinanceApiRestrictions restrictions)
+    {
+        var permissions = restrictions.DangerousPermissions.Count == 0
+            ? "configuration non lecture seule"
+            : string.Join(", ", restrictions.DangerousPermissions);
+        return $"Cle Binance refusee: permissions non autorisees detectees ({permissions}). Cree une cle separee avec lecture seule uniquement.";
     }
 
     private void ImportStudioView_AddExportRequested(object? sender, EventArgs e)

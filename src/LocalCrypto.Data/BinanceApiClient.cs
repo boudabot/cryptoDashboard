@@ -90,6 +90,45 @@ public sealed class BinanceApiClient
         return new BinanceAccountSnapshot(DateTimeOffset.FromUnixTimeMilliseconds(account.UpdateTime), balances);
     }
 
+    public async Task<BinanceApiRestrictions> GetApiRestrictionsAsync(
+        BinanceApiCredentials credentials,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(credentials.ApiKey) || string.IsNullOrWhiteSpace(credentials.ApiSecret))
+        {
+            throw new InvalidOperationException("Cle API Binance incomplete.");
+        }
+
+        var parameters = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
+            ["recvWindow"] = "5000"
+        };
+        var query = BuildSignedQuery(parameters, credentials.ApiSecret);
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/sapi/v1/account/apiRestrictions?{query}");
+        request.Headers.Add("X-MBX-APIKEY", credentials.ApiKey);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        EnsureSuccess(response.StatusCode, body);
+
+        var restrictions = JsonSerializer.Deserialize<BinanceApiRestrictionsResponse>(body, JsonOptions)
+            ?? throw new InvalidOperationException("Reponse Binance apiRestrictions illisible.");
+        return new BinanceApiRestrictions(
+            restrictions.IpRestrict,
+            restrictions.EnableReading,
+            restrictions.EnableWithdrawals,
+            restrictions.EnableInternalTransfer,
+            restrictions.EnableMargin,
+            restrictions.EnableFutures,
+            restrictions.PermitsUniversalTransfer,
+            restrictions.EnableVanillaOptions,
+            restrictions.EnableFixApiTrade,
+            restrictions.EnableFixReadOnly,
+            restrictions.EnableSpotAndMarginTrading,
+            restrictions.EnablePortfolioMarginTrading);
+    }
+
     public static string BuildSignedQuery(IReadOnlyDictionary<string, string> parameters, string apiSecret)
     {
         var query = string.Join("&", parameters.Select(parameter =>
@@ -102,8 +141,21 @@ public sealed class BinanceApiClient
     {
         var key = Encoding.UTF8.GetBytes(apiSecret);
         var payload = Encoding.UTF8.GetBytes(query);
-        var hash = HMACSHA256.HashData(key, payload);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        byte[]? hash = null;
+        try
+        {
+            hash = HMACSHA256.HashData(key, payload);
+            return Convert.ToHexString(hash).ToLowerInvariant();
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(payload);
+            if (hash is not null)
+            {
+                CryptographicOperations.ZeroMemory(hash);
+            }
+        }
     }
 
     private async Task<T> GetJsonAsync<T>(string requestUri, CancellationToken cancellationToken)
@@ -160,6 +212,20 @@ public sealed class BinanceApiClient
 
     private sealed record BinanceAccountBalanceResponse(string Asset, string Free, string Locked);
 
+    private sealed record BinanceApiRestrictionsResponse(
+        bool IpRestrict,
+        bool EnableReading,
+        bool EnableWithdrawals,
+        bool EnableInternalTransfer,
+        bool EnableMargin,
+        bool EnableFutures,
+        bool PermitsUniversalTransfer,
+        bool EnableVanillaOptions,
+        bool EnableFixApiTrade,
+        bool EnableFixReadOnly,
+        bool EnableSpotAndMarginTrading,
+        bool EnablePortfolioMarginTrading);
+
     private sealed record BinanceErrorResponse(int Code, string Msg);
 }
 
@@ -172,6 +238,92 @@ public sealed record BinanceAccountSnapshot(DateTimeOffset SyncedAt, IReadOnlyLi
 public sealed record BinanceAccountBalance(string Asset, decimal Free, decimal Locked)
 {
     public decimal Total => Free + Locked;
+}
+
+public sealed record BinanceApiRestrictions(
+    bool IpRestrict,
+    bool EnableReading,
+    bool EnableWithdrawals,
+    bool EnableInternalTransfer,
+    bool EnableMargin,
+    bool EnableFutures,
+    bool PermitsUniversalTransfer,
+    bool EnableVanillaOptions,
+    bool EnableFixApiTrade,
+    bool EnableFixReadOnly,
+    bool EnableSpotAndMarginTrading,
+    bool EnablePortfolioMarginTrading)
+{
+    public bool IsStrictReadOnly =>
+        EnableReading &&
+        !EnableWithdrawals &&
+        !EnableInternalTransfer &&
+        !EnableMargin &&
+        !EnableFutures &&
+        !PermitsUniversalTransfer &&
+        !EnableVanillaOptions &&
+        !EnableFixApiTrade &&
+        !EnableSpotAndMarginTrading &&
+        !EnablePortfolioMarginTrading;
+
+    public IReadOnlyList<string> DangerousPermissions
+    {
+        get
+        {
+            var permissions = new List<string>();
+            if (!EnableReading)
+            {
+                permissions.Add("lecture desactivee");
+            }
+
+            if (EnableWithdrawals)
+            {
+                permissions.Add("retrait");
+            }
+
+            if (EnableInternalTransfer)
+            {
+                permissions.Add("transfert interne");
+            }
+
+            if (EnableMargin)
+            {
+                permissions.Add("margin");
+            }
+
+            if (EnableFutures)
+            {
+                permissions.Add("futures");
+            }
+
+            if (PermitsUniversalTransfer)
+            {
+                permissions.Add("transfert universel");
+            }
+
+            if (EnableVanillaOptions)
+            {
+                permissions.Add("options");
+            }
+
+            if (EnableFixApiTrade)
+            {
+                permissions.Add("FIX trading");
+            }
+
+            if (EnableSpotAndMarginTrading)
+            {
+                permissions.Add("trading spot/margin");
+            }
+
+            if (EnablePortfolioMarginTrading)
+            {
+                permissions.Add("portfolio margin trading");
+            }
+
+            return permissions;
+        }
+    }
 }
 
 public sealed class BinanceApiException(HttpStatusCode statusCode, string message) : InvalidOperationException(message)

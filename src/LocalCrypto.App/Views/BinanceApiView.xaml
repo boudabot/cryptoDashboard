@@ -41,7 +41,7 @@
                         <PasswordBox x:Name="ApiSecretBox" Background="#111827" Foreground="#E5E7EB" BorderBrush="#334155" Padding="9,7" />
                     </StackPanel>
                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="18,0,0,0">
-                        <Button Content="Enregistrer" Click="SaveCredentials_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" FontWeight="SemiBold" Padding="14,9" Margin="0,0,8,0" />
+                        <Button Content="Verifier + enregistrer" Click="SaveCredentials_Click" Background="#F0B90B" Foreground="#111827" BorderBrush="#F0B90B" FontWeight="SemiBold" Padding="14,9" Margin="0,0,8,0" />
                         <Button Content="Test connexion" Click="TestConnection_Click" Background="#1F2937" Foreground="#E5E7EB" BorderBrush="#334155" Padding="14,9" Margin="0,0,8,0" />
                         <Button Content="Effacer" Click="ClearCredentials_Click" Background="#7F1D1D" Foreground="White" BorderBrush="#991B1B" Padding="14,9" />
                     </StackPanel>

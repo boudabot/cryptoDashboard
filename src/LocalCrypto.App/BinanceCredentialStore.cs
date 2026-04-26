@@ -36,11 +36,21 @@ public sealed class BinanceCredentialStore
 
         Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
         var json = JsonSerializer.Serialize(credentials, JsonOptions);
-        var protectedBytes = ProtectedData.Protect(
-            Encoding.UTF8.GetBytes(json),
-            Entropy,
-            DataProtectionScope.CurrentUser);
-        File.WriteAllText(_filePath, Convert.ToBase64String(protectedBytes), Encoding.UTF8);
+        var plainBytes = Encoding.UTF8.GetBytes(json);
+        byte[]? protectedBytes = null;
+        try
+        {
+            protectedBytes = ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.CurrentUser);
+            WriteAtomically(Convert.ToBase64String(protectedBytes));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plainBytes);
+            if (protectedBytes is not null)
+            {
+                CryptographicOperations.ZeroMemory(protectedBytes);
+            }
+        }
     }
 
     public BinanceApiCredentials? Load()
@@ -61,6 +71,24 @@ public sealed class BinanceCredentialStore
         if (File.Exists(_filePath))
         {
             File.Delete(_filePath);
+        }
+    }
+
+    private void WriteAtomically(string content)
+    {
+        var directory = Path.GetDirectoryName(_filePath)!;
+        var temporaryPath = Path.Combine(directory, $"{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(temporaryPath, content, Encoding.UTF8);
+            File.Move(temporaryPath, _filePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
         }
     }
 }
