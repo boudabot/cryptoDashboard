@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly BinanceImportReconciler _binanceImportReconciler = new();
     private readonly BinanceApiClient _binanceApiClient = new();
     private readonly BinanceCredentialStore _binanceCredentialStore = new();
+    private readonly BinanceSnapshotStore _binanceSnapshotStore;
     private readonly List<BinanceImportEvent> _binanceImportEvents = [];
     private readonly List<BinanceImportDuplicate> _binanceImportDuplicates = [];
     private readonly HashSet<string> _loadedImportFiles = new(StringComparer.OrdinalIgnoreCase);
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _store = SqliteLedgerStore.OpenDefault();
+        _binanceSnapshotStore = BinanceSnapshotStore.OpenDefault();
         DatabasePathText.Text = _store.DatabasePath;
         DataView.SetDatabasePath(_store.DatabasePath);
         InitializeBinanceApiView();
@@ -182,12 +184,12 @@ public partial class MainWindow : Window
 
     private async void BinanceApiView_TestConnectionRequested(object? sender, EventArgs e)
     {
-        await RefreshBinanceSpotAsync("Test connexion Binance...");
+        await RefreshBinanceSpotAsync("Test connexion Binance et lecture couverture...");
     }
 
     private async void BinanceApiView_RefreshSpotRequested(object? sender, EventArgs e)
     {
-        await RefreshBinanceSpotAsync("Synchronisation des soldes Spot Binance...");
+        await RefreshBinanceSpotAsync("Synchronisation Binance: Spot, Earn, ordres, prix et graphes...");
     }
 
     private void BinanceApiView_ClearCredentialsRequested(object? sender, EventArgs e)
@@ -217,7 +219,7 @@ public partial class MainWindow : Window
             }
 
             BinanceApiView.SetSyncRunning(runningMessage);
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var restrictions = await _binanceApiClient.GetApiRestrictionsAsync(credentials, cancellation.Token);
             if (!restrictions.IsStrictReadOnly)
             {
@@ -227,16 +229,35 @@ public partial class MainWindow : Window
                 return;
             }
 
+            var warnings = new List<string>();
             var snapshot = await _binanceApiClient.GetAccountSnapshotAsync(credentials, cancellation.Token);
-            var prices = await LoadBinancePricesAsync(snapshot.Balances, cancellation.Token);
-            var rows = BinanceApiUiBuilder.BuildRows(snapshot, prices);
-            var total = BinanceApiUiBuilder.TotalUsdt(snapshot, prices);
+            var earnAccount = await TryLoadSimpleEarnAccountAsync(credentials, warnings, cancellation.Token);
+            var earnPositions = await LoadEarnPositionsAsync(credentials, warnings, cancellation.Token);
+            var assetUniverse = snapshot.Balances.Select(balance => balance.Asset)
+                .Concat(earnPositions.Select(position => position.Asset))
+                .Select(BinanceApiUiBuilder.UnderlyingAssetFor)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var prices = await LoadBinancePricesAsync(assetUniverse, cancellation.Token);
+            var rows = BinanceApiUiBuilder.BuildRows(snapshot, earnPositions, prices);
+            var openOrders = await LoadOpenOrdersAsync(credentials, warnings, cancellation.Token);
+            var klines = await LoadBinanceKlinesAsync(BinanceApiUiBuilder.AssetsNeedingMarketData(rows), cancellation.Token);
+            var syncedAt = DateTimeOffset.UtcNow;
+            _binanceSnapshotStore.SaveSnapshot(syncedAt, ToCachedAssetRows(rows), prices, openOrders, klines);
+
+            var total = BinanceApiUiBuilder.TotalUsdt(rows);
             var pricedRows = rows.Count(row => row.PriceUsdt != "-");
+            var earnSummary = earnAccount is null
+                ? "Earn indisponible"
+                : $"Earn {UiFormatting.FormatNumber(earnAccount.TotalAmountInUSDT)} USDT";
+            var warningText = warnings.Count == 0 ? string.Empty : $" Limites: {string.Join("; ", warnings)}.";
             BinanceApiView.SetSyncResult(
                 rows,
+                BinanceApiUiBuilder.BuildOpenOrderRows(openOrders),
                 $"{UiFormatting.FormatNumber(total)} USDT",
-                snapshot.SyncedAt,
-                $"Spot lu depuis Binance: {rows.Count} actif(s), {pricedRows} prix public(s) disponibles. Aucune ecriture SQLite.");
+                syncedAt,
+                klines.Count,
+                $"Binance lu: {snapshot.Balances.Count} spot, {earnPositions.Count} earn, {openOrders.Count} ordre(s), {pricedRows} prix, {klines.Count} bougie(s) cachees. {earnSummary}. Aucune ecriture ledger SQLite.{warningText}");
         }
         catch (Exception exception)
         {
@@ -249,13 +270,13 @@ public partial class MainWindow : Window
     }
 
     private async Task<IReadOnlyDictionary<string, decimal>> LoadBinancePricesAsync(
-        IReadOnlyList<BinanceAccountBalance> balances,
+        IReadOnlyList<string> assets,
         CancellationToken cancellationToken)
     {
         var prices = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        foreach (var balance in balances)
+        foreach (var asset in assets)
         {
-            var symbol = BinanceApiUiBuilder.PriceSymbolFor(balance.Asset);
+            var symbol = BinanceApiUiBuilder.PriceSymbolFor(asset);
             if (symbol is null)
             {
                 continue;
@@ -264,12 +285,106 @@ public partial class MainWindow : Window
             var ticker = await _binanceApiClient.TryGetPriceAsync(symbol, cancellationToken);
             if (ticker is not null)
             {
-                prices[balance.Asset] = ticker.Price;
+                prices[BinanceApiUiBuilder.UnderlyingAssetFor(asset)] = ticker.Price;
             }
         }
 
         return prices;
     }
+
+    private static IReadOnlyList<BinanceCachedAssetSnapshot> ToCachedAssetRows(IReadOnlyList<BinanceLiveBalanceRow> rows) =>
+        rows.Select(row => new BinanceCachedAssetSnapshot(
+                row.Source,
+                row.Asset,
+                row.UnderlyingAsset,
+                row.FreeAmount,
+                row.LockedAmount,
+                row.TotalAmount,
+                row.PriceUsdtValue,
+                row.ValueUsdtValue,
+                row.Status))
+            .ToList();
+
+    private async Task<BinanceSimpleEarnAccount?> TryLoadSimpleEarnAccountAsync(
+        BinanceApiCredentials credentials,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _binanceApiClient.GetSimpleEarnAccountAsync(credentials, cancellationToken);
+        }
+        catch (Exception exception) when (IsOptionalBinanceSectionFailure(exception))
+        {
+            warnings.Add($"Earn compte: {SafeErrorMessage(exception, credentials)}");
+            return null;
+        }
+    }
+
+    private async Task<IReadOnlyList<BinanceEarnPosition>> LoadEarnPositionsAsync(
+        BinanceApiCredentials credentials,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        var positions = new List<BinanceEarnPosition>();
+        try
+        {
+            positions.AddRange(await _binanceApiClient.GetFlexibleEarnPositionsAsync(credentials, cancellationToken));
+        }
+        catch (Exception exception) when (IsOptionalBinanceSectionFailure(exception))
+        {
+            warnings.Add($"Earn flexible: {SafeErrorMessage(exception, credentials)}");
+        }
+
+        try
+        {
+            positions.AddRange(await _binanceApiClient.GetLockedEarnPositionsAsync(credentials, cancellationToken));
+        }
+        catch (Exception exception) when (IsOptionalBinanceSectionFailure(exception))
+        {
+            warnings.Add($"Earn locked: {SafeErrorMessage(exception, credentials)}");
+        }
+
+        return positions;
+    }
+
+    private async Task<IReadOnlyList<BinanceOpenOrder>> LoadOpenOrdersAsync(
+        BinanceApiCredentials credentials,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _binanceApiClient.GetOpenOrdersAsync(credentials, cancellationToken);
+        }
+        catch (Exception exception) when (IsOptionalBinanceSectionFailure(exception))
+        {
+            warnings.Add($"ordres ouverts: {SafeErrorMessage(exception, credentials)}");
+            return [];
+        }
+    }
+
+    private async Task<IReadOnlyList<BinanceKline>> LoadBinanceKlinesAsync(
+        IReadOnlyList<string> assets,
+        CancellationToken cancellationToken)
+    {
+        var klines = new List<BinanceKline>();
+        foreach (var asset in assets.Take(20))
+        {
+            var symbol = BinanceApiUiBuilder.PriceSymbolFor(asset);
+            if (symbol is null)
+            {
+                continue;
+            }
+
+            klines.AddRange(await _binanceApiClient.TryGetKlinesAsync(symbol, "1d", 90, cancellationToken));
+        }
+
+        return klines;
+    }
+
+    private static bool IsOptionalBinanceSectionFailure(Exception exception) =>
+        exception is BinanceApiException or HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException;
 
     private static string SafeErrorMessage(Exception exception, BinanceApiCredentials? credentials = null)
     {

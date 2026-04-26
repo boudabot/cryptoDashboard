@@ -18,7 +18,7 @@ public partial class BinanceApiView : UserControl
     {
         InitializeComponent();
         SetInitialState(false, "Aucune cle API enregistree.");
-        SetBalances([]);
+        SetCoverage([], [], 0);
     }
 
     public void ClearCredentialInputs()
@@ -38,6 +38,7 @@ public partial class BinanceApiView : UserControl
         BinanceLastSyncCard.Value = "-";
         CredentialHintText.Text = hint;
         BinanceFeedbackText.Text = string.Empty;
+        BinanceCacheText.Text = "Cache graphes: -";
         SetConnectionStatus(hasCredentials ? "Cle locale" : "Non connecte", hasCredentials ? "#38BDF8" : "#64748B");
     }
 
@@ -49,15 +50,17 @@ public partial class BinanceApiView : UserControl
 
     public void SetSyncResult(
         IReadOnlyList<BinanceLiveBalanceRow> rows,
+        IReadOnlyList<BinanceOpenOrderRow> openOrders,
         string approximateValue,
         DateTimeOffset syncedAt,
+        int cachedKlines,
         string feedback)
     {
-        SetBalances(rows);
+        SetCoverage(rows, openOrders, cachedKlines);
         BinanceConnectionCard.Value = "OK";
         BinanceConnectionCard.Hint = "Connexion Binance read-only validee.";
         BinanceConnectionCard.ValueBrush = "#22C55E";
-        BinanceSpotAssetsCard.Value = rows.Count.ToString(UiFormatting.FrenchCulture);
+        BinanceSpotAssetsCard.Value = rows.Select(row => row.UnderlyingAsset).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString(UiFormatting.FrenchCulture);
         BinanceApproxValueCard.Value = approximateValue;
         BinanceApproxValueCard.Hint = "Approximation prix publics USDT.";
         BinanceLastSyncCard.Value = syncedAt.ToLocalTime().ToString("dd/MM HH:mm", UiFormatting.FrenchCulture);
@@ -85,9 +88,14 @@ public partial class BinanceApiView : UserControl
         BinanceMetricsGrid.Columns = compact ? 2 : 4;
     }
 
-    private void SetBalances(IReadOnlyList<BinanceLiveBalanceRow> rows)
+    private void SetCoverage(
+        IReadOnlyList<BinanceLiveBalanceRow> rows,
+        IReadOnlyList<BinanceOpenOrderRow> openOrders,
+        int cachedKlines)
     {
         BinanceBalancesGrid.ItemsSource = rows;
+        BinanceOpenOrdersGrid.ItemsSource = openOrders;
+        BinanceCacheText.Text = $"Cache graphes: {cachedKlines.ToString(UiFormatting.FrenchCulture)} bougie(s) locales";
     }
 
     private void SetConnectionStatus(string text, string brush)

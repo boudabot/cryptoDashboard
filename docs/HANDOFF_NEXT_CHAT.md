@@ -1,6 +1,6 @@
 # Handoff next chat
 
-Date: 2026-04-25
+Date: 2026-04-26
 
 But: permettre a une nouvelle conversation de reprendre le projet sans perdre le contexte produit, Git, donnees et UX.
 
@@ -36,7 +36,7 @@ C:\Users\1oliv\Documents\localCryptoWpf-spike
 Branche active au moment de cette note:
 
 ```text
-codex/ux-design
+codex/binance-data-coverage
 ```
 
 Derniers commits connus:
@@ -49,9 +49,9 @@ cfd27b9 Add portfolio UX redesign pass
 f2d268c Add ledger reset action
 ```
 
-`dev` contient `codex/import-reconciliation`.
-`master` pointe encore sur `1faa400` tant que la release stable n'a pas ete validee.
-`codex/ux-design` contient la refonte UX en cours.
+`dev` et `master` contiennent la branche Binance API read-only validee.
+Les anciennes branches `codex/binance-api-readonly` et `codex/import-reconciliation` ont ete supprimees localement apres merge.
+`codex/binance-data-coverage` ajoute la couverture data Binance live/cache sans ecriture ledger automatique.
 
 Il n'y a pas de remote configure au moment de cette note.
 
@@ -115,7 +115,8 @@ Ce qui existe deja:
 - chips actifs import cliquables
 - quarantaine import en memoire pour doublons probables
 - graphiques ledger simples sans prix live, replies par defaut
-- branche `codex/binance-api-readonly`: integration initiale Binance API read-only pour soldes Spot et prix publics, sans ecriture ledger automatique
+- Binance API read-only: integration initiale pour soldes Spot et prix publics, sans ecriture ledger automatique
+- branche `codex/binance-data-coverage`: Spot + Simple Earn flexible/locked + ordres ouverts + prix publics + cache local de klines/snapshots dans tables `binance_*`
 
 Ce qui reste incomplet ou a corriger:
 
@@ -123,8 +124,8 @@ Ce qui reste incomplet ou a corriger:
 - les valeurs portfolio peuvent etre fausses si la base existante n'a pas ete videe puis reimportee proprement
 - les devises mixtes sont maintenant signalees comme non consolidees, mais pas encore converties
 - pas encore de switch global EUR / USDT
-- pas encore de prix live/cache marche
-- Binance API ne couvre pas encore Earn/Alpha/Auto-Invest de facon complete
+- prix live/cache marche v1 en cours via Binance API, uniquement indicatif et separe du ledger
+- Binance API ne couvre pas encore Alpha/Auto-Invest de facon complete
 - pas encore de PnL latent fiable
 - `CONVERT`, `REWARD`, `INTERNAL`, `CASH` ne sont pas ecrits automatiquement dans le ledger
 - pas encore de vraie quarantaine persistante des imports
@@ -176,9 +177,9 @@ Respecte la verite ledger SQLite et ne propose pas de deuxieme source de donnees
 
 ## Structure recommandee ensuite
 
-Ordre conseille apres validation de `codex/import-reconciliation`:
+Ordre conseille apres validation de `codex/binance-data-coverage`:
 
-1. Merge `codex/import-reconciliation` dans `dev`, puis dans `master` si test utilisateur OK.
+1. Merge `codex/binance-data-coverage` dans `dev`, puis dans `master` si test utilisateur OK.
 2. `codex/import-audit-cleanup`
    - afficher doublons ignores
    - mieux expliquer les imports

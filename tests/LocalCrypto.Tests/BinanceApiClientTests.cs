@@ -134,6 +134,154 @@ public sealed class BinanceApiClientTests
     }
 
     [Fact]
+    public async Task GetFlexibleEarnPositionsReadsSignedRows()
+    {
+        HttpRequestMessage? captured = null;
+        var httpClient = new HttpClient(new StubHandler(request =>
+        {
+            captured = request;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = Json("""
+                {
+                  "rows": [
+                    {
+                      "totalAmount": "12.50000000",
+                      "latestAnnualPercentageRate": "0.0123",
+                      "cumulativeTotalRewards": "0.42",
+                      "asset": "USDC",
+                      "productId": "USDC001",
+                      "autoSubscribe": true
+                    }
+                  ],
+                  "total": 1
+                }
+                """)
+            };
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var positions = await client.GetFlexibleEarnPositionsAsync(new BinanceApiCredentials("api-key", "secret"));
+
+        Assert.NotNull(captured);
+        Assert.Contains("/sapi/v1/simple-earn/flexible/position", captured!.RequestUri!.AbsolutePath);
+        Assert.Contains("current=1", captured.RequestUri.Query);
+        Assert.Contains("signature=", captured.RequestUri.Query);
+        var position = Assert.Single(positions);
+        Assert.Equal("Earn flexible", position.Source);
+        Assert.Equal("USDC", position.Asset);
+        Assert.Equal(12.5m, position.Amount);
+        Assert.Equal(0.0123m, position.Apr);
+        Assert.Equal(0.42m, position.Rewards);
+    }
+
+    [Fact]
+    public async Task GetLockedEarnPositionsReadsSignedRows()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = Json("""
+            {
+              "rows": [
+                {
+                  "positionId": 123,
+                  "projectId": "ETH90",
+                  "asset": "ETH",
+                  "amount": "0.75000000",
+                  "APY": "0.052",
+                  "rewardAmt": "0.01",
+                  "status": "HOLDING"
+                }
+              ],
+              "total": 1
+            }
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var positions = await client.GetLockedEarnPositionsAsync(new BinanceApiCredentials("api-key", "secret"));
+
+        var position = Assert.Single(positions);
+        Assert.Equal("Earn locked", position.Source);
+        Assert.Equal("ETH", position.Asset);
+        Assert.Equal(0.75m, position.Amount);
+        Assert.Equal(0.052m, position.Apr);
+        Assert.Equal("HOLDING", position.Status);
+    }
+
+    [Fact]
+    public async Task GetOpenOrdersReadsAllOpenSpotOrders()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = Json("""
+            [
+              {
+                "symbol": "ETHUSDT",
+                "orderId": 12345,
+                "clientOrderId": "local",
+                "price": "2500.00",
+                "origQty": "0.2000",
+                "executedQty": "0.0500",
+                "status": "NEW",
+                "type": "LIMIT",
+                "side": "BUY",
+                "time": 1710000000000,
+                "updateTime": 1710000001000
+              }
+            ]
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var orders = await client.GetOpenOrdersAsync(new BinanceApiCredentials("api-key", "secret"));
+
+        var order = Assert.Single(orders);
+        Assert.Equal("ETHUSDT", order.Symbol);
+        Assert.Equal(12345, order.OrderId);
+        Assert.Equal(2500m, order.Price);
+        Assert.Equal(0.2m, order.OriginalQuantity);
+        Assert.Equal(0.05m, order.ExecutedQuantity);
+    }
+
+    [Fact]
+    public async Task TryGetKlinesParsesCandles()
+    {
+        var httpClient = new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = Json("""
+            [
+              [1710000000000, "10.0", "12.0", "9.0", "11.0", "123.45", 1710086399999]
+            ]
+            """)
+        }))
+        {
+            BaseAddress = new Uri("https://example.test")
+        };
+        var client = new BinanceApiClient(httpClient);
+
+        var klines = await client.TryGetKlinesAsync("ethusdt", "1d", 90);
+
+        var kline = Assert.Single(klines);
+        Assert.Equal("ETHUSDT", kline.Symbol);
+        Assert.Equal("1d", kline.Interval);
+        Assert.Equal(10m, kline.Open);
+        Assert.Equal(12m, kline.High);
+        Assert.Equal(9m, kline.Low);
+        Assert.Equal(11m, kline.Close);
+        Assert.Equal(123.45m, kline.Volume);
+    }
+
+    [Fact]
     public void BuildSignedQueryUsesHmacSha256()
     {
         var query = BinanceApiClient.BuildSignedQuery(

@@ -10,9 +10,11 @@ On ajoute Binance API comme source live separee du ledger SQLite.
 Elle sert a:
 
 - lire le solde Spot courant
+- lire les positions Simple Earn flexible/locked quand Binance les expose a la cle
+- lire les ordres Spot ouverts
 - verifier une cle API read-only
 - recuperer des prix publics indicatifs
-- preparer le futur cache prix/devise
+- alimenter un cache local de prix et de bougies pour les futurs graphes
 
 Elle ne sert pas encore a:
 
@@ -45,8 +47,33 @@ Points retenus:
 - les endpoints publics comme `/api/v3/time` et `/api/v3/ticker/price` ne demandent pas de signature
 - les endpoints `USER_DATA`, dont `/api/v3/account`, demandent `X-MBX-APIKEY`, `timestamp`, `recvWindow` et une signature HMAC SHA256
 - `/api/v3/account` donne les balances Spot du compte
+- `/api/v3/openOrders` donne les ordres Spot ouverts
 - `/api/v3/ticker/price` donne un prix public par symbole, par exemple `ETHUSDT`
+- `/api/v3/klines` donne des bougies de marche par symbole et intervalle
 - `/sapi/v1/account/apiRestrictions` permet de lire les permissions de la cle API courante avant de l'accepter
+- `/sapi/v1/simple-earn/account` donne une synthese Simple Earn
+- `/sapi/v1/simple-earn/flexible/position` donne les positions Earn flexibles
+- `/sapi/v1/simple-earn/locked/position` donne les positions Earn verrouillees
+
+## Cache local Binance
+
+Les donnees live Binance ne sont pas ecrites dans la table `transactions`.
+
+Elles sont cachees dans des tables separees du meme fichier SQLite:
+
+- `binance_asset_snapshots`
+- `binance_open_order_snapshots`
+- `binance_price_snapshots`
+- `binance_klines`
+
+Ces tables servent a:
+
+- garder une trace locale des refreshs API
+- preparer les graphes sans tout rappeler a chaque affichage
+- separer clairement `ledger valide` et `donnees live`
+- faciliter une future reconciliation API -> preview -> validation ledger
+
+Elles ne servent pas a calculer le portefeuille officiel. La source de verite portefeuille reste `transactions`.
 
 ## Securite locale
 
@@ -92,8 +119,9 @@ Regle d'exploitation:
 
 ## Limites connues
 
-- pas encore de cache prix persistant
 - pas encore de conversion officielle EUR/USDT
 - les prix publics USDT sont indicatifs
 - certains actifs peuvent ne pas avoir de paire `{ASSET}USDT`
-- Simple Earn, Alpha et Auto-Invest peuvent demander des endpoints Binance separes ou rester mieux couverts par exports au debut
+- les actifs `LD...` sont mappes vers leur sous-jacent pour le prix public quand c'est possible
+- Alpha et Auto-Invest demandent encore des endpoints Binance separes ou restent mieux couverts par exports au debut
+- les graphes live temps reel doivent passer plus tard par WebSocket ou refresh controle; cette passe stocke deja les snapshots/klines

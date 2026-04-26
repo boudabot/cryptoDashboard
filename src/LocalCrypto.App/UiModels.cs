@@ -117,10 +117,27 @@ public sealed record LedgerChartRow(
     string Color);
 
 public sealed record BinanceLiveBalanceRow(
+    string Source,
     string Asset,
+    string UnderlyingAsset,
     string Free,
     string Locked,
     string Total,
     string PriceUsdt,
     string ValueUsdt,
-    string Status);
+    string Status,
+    decimal FreeAmount,
+    decimal LockedAmount,
+    decimal TotalAmount,
+    decimal? PriceUsdtValue,
+    decimal? ValueUsdtValue);
+
+public sealed record BinanceOpenOrderRow(
+    string Symbol,
+    string Side,
+    string Type,
+    string Status,
+    string Price,
+    string Quantity,
+    string Executed,
+    string UpdatedAt);
