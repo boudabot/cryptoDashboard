@@ -62,8 +62,20 @@ public sealed class BinanceCredentialStore
 
         var encoded = File.ReadAllText(_filePath, Encoding.UTF8);
         var protectedBytes = Convert.FromBase64String(encoded);
-        var bytes = ProtectedData.Unprotect(protectedBytes, Entropy, DataProtectionScope.CurrentUser);
-        return JsonSerializer.Deserialize<BinanceApiCredentials>(Encoding.UTF8.GetString(bytes));
+        byte[]? bytes = null;
+        try
+        {
+            bytes = ProtectedData.Unprotect(protectedBytes, Entropy, DataProtectionScope.CurrentUser);
+            return JsonSerializer.Deserialize<BinanceApiCredentials>(Encoding.UTF8.GetString(bytes));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(protectedBytes);
+            if (bytes is not null)
+            {
+                CryptographicOperations.ZeroMemory(bytes);
+            }
+        }
     }
 
     public void Clear()

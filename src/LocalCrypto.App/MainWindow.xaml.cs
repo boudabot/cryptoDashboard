@@ -221,6 +221,8 @@ public partial class MainWindow : Window
             var restrictions = await _binanceApiClient.GetApiRestrictionsAsync(credentials, cancellation.Token);
             if (!restrictions.IsStrictReadOnly)
             {
+                _binanceCredentialStore.Clear();
+                BinanceApiView.ClearCredentialInputs();
                 BinanceApiView.SetError(ReadOnlyFailureMessage(restrictions));
                 return;
             }
